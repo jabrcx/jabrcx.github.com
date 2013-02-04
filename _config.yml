@@ -3,11 +3,11 @@
 # ----------------------- #
 
 url: http://jabrcx.github.com
-title: My Octopress Blog
-subtitle: A blogging framework for hackers.
-author: Your Name
+title: jabrcx
+subtitle: it is what it is
+author: jabrcx
 simple_search: http://google.com/search
-description:
+description: it is what it is
 
 # Default date format is "ordinal" (resulting in "July 22nd 2007")
 # You can customize the format as defined in
