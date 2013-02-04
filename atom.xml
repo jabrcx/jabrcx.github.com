@@ -4,7 +4,7 @@
   <title><![CDATA[jabrcx]]></title>
   <link href="http://jabrcx.github.com/atom.xml" rel="self"/>
   <link href="http://jabrcx.github.com/"/>
-  <updated>2013-02-03T22:03:00-05:00</updated>
+  <updated>2013-02-03T23:20:06-05:00</updated>
   <id>http://jabrcx.github.com/</id>
   <author>
     <name><![CDATA[jabrcx]]></name>
@@ -12,5 +12,14 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[experiencing how this works]]></title>
+    <link href="http://jabrcx.github.com/blog/2013/02/03/experiencing-how-this-works/"/>
+    <updated>2013-02-03T23:18:00-05:00</updated>
+    <id>http://jabrcx.github.com/blog/2013/02/03/experiencing-how-this-works</id>
+    <content type="html"><![CDATA[<p>This is a test.</p>
+]]></content>
+  </entry>
   
 </feed>
