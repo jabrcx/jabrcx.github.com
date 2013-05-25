@@ -686,6 +686,10 @@ See <code>logstats --help</code> for details:</p>
 <span class='line-number'>230</span>
 <span class='line-number'>231</span>
 <span class='line-number'>232</span>
+<span class='line-number'>233</span>
+<span class='line-number'>234</span>
+<span class='line-number'>235</span>
+<span class='line-number'>236</span>
 </pre></td><td class='code'><pre><code class='text'><span class='line'>NAME
 </span><span class='line'>    logstats - summarize and visualize data in log files
 </span><span class='line'>
@@ -907,6 +911,10 @@ See <code>logstats --help</code> for details:</p>
 </span><span class='line'>    --units and --legend-off, respectively.)
 </span><span class='line'>
 </span><span class='line'>EXAMPLES
+</span><span class='line'>    See the following for a full write-up and detailed examples:
+</span><span class='line'>
+</span><span class='line'>        http://jabrcx.github.io/logstats
+</span><span class='line'>
 </span><span class='line'>    Plot 5-second averages of a value that changes randomly every second (takes 60 seconds to run):
 </span><span class='line'>        ( for i in {1..60}; do echo $(date) $RANDOM; sleep 1; done ) | logstats -a &#39;x: (\d+)&#39; -t 5 --show-plots
 </span><span class='line'>
@@ -917,7 +925,7 @@ See <code>logstats --help</code> for details:</p>
 </span><span class='line'>        logstats --extract --time-format %Y%m%d%H%M%S --tstart 1004261200 --tend 1004271200 full.log &gt; day.log
 </span><span class='line'>
 </span><span class='line'>AUTHOR
-</span><span class='line'>    John Brunelle
+</span><span class='line'>    Copyright (c) 2013, John A. Brunelle
 </span></code></pre></td></tr></table></div></figure>
 
 
