@@ -1,0 +1,413 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>logstats &mdash; Summarize and Visualize Data in Log Files - jabrcx</title>
+  <meta name="author" content="jabrcx">
+
+  
+  <meta name="description" content="logstats &mdash; Summarize and Visualize Data in Log Files Apr 27th, 2013 You have data buried in log files.
+Need to identify some trends?
+Need to &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://jabrcx.github.com/logstats/index.markdown.bak">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="jabrcx" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">jabrcx</a></h1>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:jabrcx.github.com" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article role="article">
+  
+  <header>
+    <h1 class="entry-title">logstats &mdash; Summarize and Visualize Data in Log Files</h1>
+    <p class="meta">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-04-27T17:48:00-04:00" pubdate data-updated="true">Apr 27<span>th</span>, 2013</time></p>
+  </header>
+  
+  You have data buried in log files.
+Need to identify some trends?
+Need to extract, summarize, and analyze numbers included in the log entries?
+Want something quick and easy without the need for an entire infrastructure for log analysis?
+That's what `logstats` is for.
+
+`logstats` reads in log files &mdash; text files where each line starts with a timestamp.
+You specify regular expressions describing the events and/or numeric data you're interested in.
+`logstats` aggregates statistics about the events by regular time interval &mdash; a time series histogram.
+By default it prints the data to the screen; if you have matplotlib installed it can plot it, too.
+It can also compute overall statistics in addition to the time series statistics.
+
+`logstats` is a standalone, command-line script, written in Python, with no other external dependencies other than matplotlib (and that's only needed for extra plotting in addition to the default text output).
+
+------------------------------------------------------------------------------
+
+The Basics
+----------
+
+`logstats` can count event occurrences and it can sum and/or average numeric data in the log entries.
+The basic way to invoke `logstats` is:
+
+	$ logstats  --TYPE LABEL:REGEX  FILENAME
+
+where
+
+* `TYPE` is the statistic type &mdash; `count`, `sum`, or `average`.
+* `LABEL` is how you want to label the event in output and plots.
+* `REGEX` is a regular expression designed to match the log entries of interest.
+* `FILENAME` is a log file (timestamped text)
+
+If `TYPE` is `sum` or `average`, then `REGEX` must contain one subgroup that extracts the specific numeric value of interest.
+Whitespace around the `:` character is ignored, and since typical `LABEL`s and/or `REGEX`es will have whitespace and/or special metacharacters in them, don't forget to quote the whole thing so the shell doesn't attempt to parse it before it gets to `logstats`.
+If no `FILENAME`s are given, `logstats` will read from stdin.
+
+Usage is best demonstrated by example, which requires an example log file.
+This demo uses a log named `data-mover.log` from a distributed data transfer system, simplified for demo purposes.
+There are log entries for each call to `data-get` and `data-put`, and there are entries regarding `token` acquisition (a semaphore for controlling the number of parallel transfers).
+Many of these transfers are happening in parallel, on many hosts, all logging to this file like so:
+
+	...
+	2012-02-19 07:00:05: host6203: pid  9480: data-mover called: data-put --size 367437348
+	2012-02-19 07:00:05: host5404: pid  1373: data-mover called: data-put --size 22980
+	2012-02-19 07:00:06: host5404: pid  1373: acquiring an i/o token
+	2012-02-19 07:00:06: host6203: pid  9480: acquiring an i/o token
+	2012-02-19 07:00:06: host6203: pid  9480: i/o token acquired: token:mover4_0, host:mover4, tries:1, wait:0.0 seconds
+	2012-02-19 07:00:06: host5404: pid  1373: i/o token acquired: token:mover3_0, host:mover3, tries:1, wait:0.0 seconds
+	2012-02-19 07:00:06: host5404: pid  1373: put transfer of [22980] bytes completed in [0.285] seconds [0.077 MiB/s]
+	2012-02-19 07:00:07: host5313: pid 16023: data-mover called: data-get --size 788861763
+	...
+
+The exact meaning and sequence of the events is not important &mdash; just note the data begging to be summarized and plotted.
+
+
+##Counting Events
+
+Say we want to see the number of data-mover calls as function of time.
+We're therefore interested in the lines containing the string `data-mover called` &mdash; that'll be the `REGEX`, just a fixed string in this simple case.
+We can give this statistic the label `Data-Mover Calls`:
+
+	$ logstats --count 'Data-Mover Calls: data-mover called'  data-mover.log
+												  Data-Mover Calls
+												------------------
+	[2012-02-19 07:00:00, 2012-02-19 07:05:00):                150
+	[2012-02-19 07:05:00, 2012-02-19 07:10:00):                216
+	[2012-02-19 07:10:00, 2012-02-19 07:15:00):                248
+	[2012-02-19 07:15:00, 2012-02-19 07:20:00):                139
+	[2012-02-19 07:20:00, 2012-02-19 07:25:00):                 70
+	[2012-02-19 07:25:00, 2012-02-19 07:30:00):                189
+	[2012-02-19 07:30:00, 2012-02-19 07:35:00):                153
+	[2012-02-19 07:35:00, 2012-02-19 07:40:00):                122
+	...
+
+This counted up the number of calls that happended during each 5 minutes interval.
+(As with all examples here, the text output is truncated for clarity.)
+By adding `--show-plots` and/or `--save-plots`, we get a picture (requires matplotlib):
+
+<img src="120219070000-120219202959.count.Data-Mover_Calls.time_series_300s.png" />
+
+Multiple statistics of the same type can be put on the same plot.
+For example, the following will plot `data-get` and `data-put` calls separately.
+Since the strings `data-get` and `data-put` are only mentioned in the log entries noting a new call, the `REGEX`es can again be simple fixed strings:
+
+	$ logstats --count 'Get Calls: data-get' --count 'Put Calls: data-put' --save-plots  data-mover.log
+												   Get Calls   Put Calls
+												------------------------
+	[2012-02-19 07:00:00, 2012-02-19 07:05:00):          112          38
+	[2012-02-19 07:05:00, 2012-02-19 07:10:00):          191          25
+	[2012-02-19 07:10:00, 2012-02-19 07:15:00):          214          34
+	[2012-02-19 07:15:00, 2012-02-19 07:20:00):          104          35
+	[2012-02-19 07:20:00, 2012-02-19 07:25:00):           32          38
+	[2012-02-19 07:25:00, 2012-02-19 07:30:00):          133          56
+	[2012-02-19 07:30:00, 2012-02-19 07:35:00):          102          51
+	[2012-02-19 07:35:00, 2012-02-19 07:40:00):           67          55
+	...
+
+<img src="120219070000-120219202959.count.Get_Calls,Put_Calls.time_series_300s.png" />
+
+Often there is some field in the log entries for which you want individual statistics for each unique value that occurs.
+For example, when an i/o token is acquired, it notes a mover host that should be used for the transfer, e.g. `host:mover4` in this entry:
+
+	2012-02-19 07:00:06: host6203: pid  9480: i/o token acquired: token:mover4_0, host:mover4, tries:1, wait:0.0 seconds
+
+To plot token acquisition count per mover host, use `--breakdown-by-field 10` &mdash; the field of interest is the 10th one (when split on whitespace and indexed from 1, including the timestamp):
+
+	$ logstats --count 'Token Acquisitions: i/o token acquired' --breakdown-by-field 10 --save-plots  data-mover.log
+												  Token Acquisitions         host:mover3         host:mover4         host:mover2         host:mover1
+												----------------------------------------------------------------------------------------------------
+	[2012-02-19 07:00:00, 2012-02-19 07:05:00):                  151                  53                  50                  43                   5
+	[2012-02-19 07:05:00, 2012-02-19 07:10:00):                  223                  70                  78                  68                   7
+	[2012-02-19 07:10:00, 2012-02-19 07:15:00):                  260                  95                  89                  71                   5
+	[2012-02-19 07:15:00, 2012-02-19 07:20:00):                  143                  48                  45                  48                   2
+	[2012-02-19 07:20:00, 2012-02-19 07:25:00):                   70                  19                  20                  28                   3
+	[2012-02-19 07:25:00, 2012-02-19 07:30:00):                  195                  56                  69                  61                   9
+	[2012-02-19 07:30:00, 2012-02-19 07:35:00):                  155                  54                  54                  44                   3
+	[2012-02-19 07:35:00, 2012-02-19 07:40:00):                  122                  38                  44                  35                   5
+	...
+
+<img src="120219070000-120219202959.count.Token_Acquisitions.breakdown10.time_series_300s.png" />
+
+Some helpful options for conveying more information in the plot are `--totals-in-title` and `--totals-in-legend`.
+These will include the total values for each thing plotted, which otherwise aren't shown.
+Furthermore, by adding `--totals-only` or `--totals-also`, `logstats` will compute and plot the total counts separately:
+
+	$ logstats --count 'Token Acquisitions: i/o token acquired' --breakdown-by-field 10 --totals-only --save-plots  data-mover.log
+												  Token Acquisitions         host:mover4         host:mover2         host:mover3         host:mover1
+												----------------------------------------------------------------------------------------------------
+	[2012-02-19 07:00:00, 2012-02-19 20:29:59]:                29557                9578                9551                9420                1008
+
+<img src="120219070000-120219202959.count.Token_Acquisitions.breakdown10.total.smaller.png" />
+
+Sometimes when using `--breakdown-by-field-number` there are a lot of small entries that clutter the plots.
+Use `--breakdown-threshold-percent PERCENT` to gather then all into one entry named <em>OTHER</em>.
+
+
+##Summing and Averaging Data in Events
+
+Note that each data-mover call also logs a file size, e.g. `--size 367437348` in the following:
+
+	2012-02-19 07:00:05: host6203: pid  9480: data-mover called: data-put --size 367437348
+
+These sizes can easily be summed.
+The string `\d+` is a regular expression for one or more digits.
+Putting this in the context of where the size occurs in the log entry, and surrounding it with parentheses to make it a group so that `logstats` can extract just the number, the `REGEX` to sum `data-get` sizes becomes `data-get --size (\d+)`.
+Naming this `Data Downloaded` and adding `--units bytes`, to label the y-axis for clarity, we have:
+
+	logstats --sum 'Data Downloaded: data-get --size (\d+)' --units bytes --save-plots  data-mover.log
+												  Data Downloaded
+												-----------------
+	[2012-02-19 07:00:00, 2012-02-19 07:05:00):      101596699714
+	[2012-02-19 07:05:00, 2012-02-19 07:10:00):      123647431651
+	[2012-02-19 07:10:00, 2012-02-19 07:15:00):      133152057117
+	[2012-02-19 07:15:00, 2012-02-19 07:20:00):       44409405396
+	[2012-02-19 07:20:00, 2012-02-19 07:25:00):       17143655761
+	[2012-02-19 07:25:00, 2012-02-19 07:30:00):       35793499937
+	[2012-02-19 07:30:00, 2012-02-19 07:35:00):       27646004108
+	[2012-02-19 07:35:00, 2012-02-19 07:40:00):        7934911797
+	...
+
+<img src="120219070000-120219202959.sum.Data_Downloaded.time_series_300s.png" />
+
+To make the y-axis a bit more clear, you can use a `--units-conversion` factor and adjust the `--units` label according.
+If you want cumulative numbers, instead of the numbers computed independently for each time bin, just add `--cumulative`.
+For example:
+
+	$ logstats --sum 'Data Downloaded: data-get --size (\d+)' --cumulative --units TB --units-conversion-factor bytes-to-TB --save-plots  data-mover.log
+												  Data Downloaded
+												-----------------
+	[2012-02-19 07:00:00, 2012-02-19 07:05:00):          0.101597
+	[2012-02-19 07:05:00, 2012-02-19 07:10:00):          0.225244
+	[2012-02-19 07:10:00, 2012-02-19 07:15:00):          0.358396
+	[2012-02-19 07:15:00, 2012-02-19 07:20:00):          0.402806
+	[2012-02-19 07:20:00, 2012-02-19 07:25:00):          0.419949
+	[2012-02-19 07:25:00, 2012-02-19 07:30:00):          0.455743
+	[2012-02-19 07:30:00, 2012-02-19 07:35:00):          0.483389
+	[2012-02-19 07:35:00, 2012-02-19 07:40:00):          0.491324
+	...
+
+<img src="120219070000-120219202959.sum.Data_Downloaded.time_series_300s_cumulative.png" />
+
+The sizes can also be averaged.
+Just change `--sum` to `--average` in the original summation plot above:
+
+	logstats --average 'Data Downloaded: data-get --size (\d+)' --units bytes --save-plots  data-mover.log
+
+<img src="120219070000-120219202959.averagevalue.Download_File_Size.time_series_300s.png" />
+
+
+##Drilling Down
+
+If you're not interested in the entire time range, `logstats` has options `--tstart` and `--tend` to limit the scope.
+There is also an option `-t` to change the time bin interval from the default 300 seconds (5 minutes).
+For example, to take the above average for a specific 15 minute range and show statistics for each 60 second interval:
+
+	$ logstats --average 'Data Downloaded: data-get --size (\d+)' --units bytes --tstart '2012-02-19 16:30:00' --tend '2012-02-19 16:45:00' -t 60 --save-plots  data-mover.log
+
+<img src="120219163000-120219164502.averagevalue.Data_Downloaded.time_series_60s.png" />
+
+
+##Entry Extraction and Collation
+
+`logstats`'s basic parsing can be put to use for simply extracting lines of interest &mdash; just add `--extract`, usually along with an event specification (the actual computation will be skipped) and/or a time range:
+
+	$ logstats --extract --tstart '2012-02-19 09:30:00' --tend '2012-02-19 09:30:03'  data-mover.log
+	2012-02-19 09:30:00: host5302: pid 19866: acquiring an i/o token
+	2012-02-19 09:30:00: host5302: pid 19866: i/o token acquired: token:mover1_0, host:mover1, tries:1, wait:0.0 seconds
+	2012-02-19 09:30:01: host6003: pid 32756: get transfer of [599708008] bytes completed in [19.365] seconds [29.534 MiB/s]
+	2012-02-19 09:30:03: host5902: pid 26520: data-mover called: data-get --size 579043303
+
+It can also be used to collate various separate logs, e.g. from different hosts, into one, time-ordered log.
+For example, say you have these two logs:
+
+	$ cat host-a.log 
+	2012-02-19 09:30:01: host-a: event one
+	2012-02-19 09:30:03: host-a: event two
+	2012-02-19 09:30:04: host-a: event three
+	2012-02-19 09:30:06: host-a: event four
+	$ cat host-b.log 
+	2012-02-19 09:30:02: host-b: event one
+	2012-02-19 09:30:04: host-b: event two
+	2012-02-19 09:30:07: host-b: event three
+
+Whenever multiple log files are given, logstats will collate the entries (though each must already be time-ordered).
+To collate and do nothing else, use `--extract` with no other selection criteria:
+
+	$ logstats --extract host-a.log host-b.log
+	2012-02-19 09:30:01: host-a: event one
+	2012-02-19 09:30:02: host-b: event one
+	2012-02-19 09:30:03: host-a: event two
+	2012-02-19 09:30:04: host-a: event three
+	2012-02-19 09:30:04: host-b: event two
+	2012-02-19 09:30:06: host-a: event four
+	2012-02-19 09:30:07: host-b: event three
+
+
+##More
+
+There are many more command line options for tweaking the behavior, e.g. plot tweaks (title, y-axis range, legend details, error bar presence, bar charts instead of pie charts, etc.) and for accomodating different time formats (`--time-format`, `--time-nchars`, etc.).
+See:
+
+	$ logstats --help
+
+For all the details.
+
+  
+    <footer>
+      <p class="meta">
+        
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-04-27T17:48:00-04:00" pubdate data-updated="true">Apr 27<span>th</span>, 2013</time>
+        
+      </p>
+      
+        <div class="sharing">
+  
+  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://jabrcx.github.com/logstats/index.markdown.bak" data-via="" data-counturl="http://jabrcx.github.com/logstats/index.markdown.bak" >Tweet</a>
+  
+  
+  
+</div>
+
+      
+    </footer>
+  
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2013 - jabrcx -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = 'http://platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

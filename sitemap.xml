@@ -1,12 +1,12 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <urlset xmlns='http://www.sitemaps.org/schemas/sitemap/0.9'>
     <url>
-        <loc>http://jabrcx.github.com/blog/2013/02/03/experiencing-how-this-works/</loc>
-        <lastmod>2013-04-25T13:51:19-04:00</lastmod>
+        <loc>http://jabrcx.github.com/logstats/</loc>
+        <lastmod>2013-05-24T21:07:09-04:00</lastmod>
     </url>
     <url>
-        <loc>http://jabrcx.github.com/robots.txt</loc>
-        <lastmod>2013-04-25T13:51:19-04:00</lastmod>
+        <loc>http://jabrcx.github.com/logstats/index.markdown.bak</loc>
+        <lastmod>2013-04-27T18:18:43-04:00</lastmod>
     </url>
     <url>
         <loc>http://jabrcx.github.com/</loc>
@@ -14,6 +14,10 @@
     </url>
     <url>
         <loc>http://jabrcx.github.com/blog/archives/</loc>
+        <lastmod>2013-04-25T13:51:19-04:00</lastmod>
+    </url>
+    <url>
+        <loc>http://jabrcx.github.com/robots.txt</loc>
         <lastmod>2013-04-25T13:51:19-04:00</lastmod>
     </url>
 </urlset>
