@@ -4,7 +4,7 @@
   <title><![CDATA[jabrcx]]></title>
   <link href="http://jabrcx.github.com/atom.xml" rel="self"/>
   <link href="http://jabrcx.github.com/"/>
-  <updated>2013-05-24T21:28:31-04:00</updated>
+  <updated>2013-05-24T21:44:35-04:00</updated>
   <id>http://jabrcx.github.com/</id>
   <author>
     <name><![CDATA[jabrcx]]></name>
@@ -21,11 +21,11 @@
     <content type="html"><![CDATA[<p>For summarizing and visualizing data in log files.
 The code is at:</p>
 
-<p><a href="https://github.com/jabrcx/logstats/">https://github.com/jabrcx/logstats/</a></p>
+<p><a href="https://github.com/jabrcx/logstats">https://github.com/jabrcx/logstats</a></p>
 
 <p>and a write-up with examples is at:</p>
 
-<p><a href="http://jabrcx.github.com/logstats/">http://jabrcx.github.com/logstats/</a></p>
+<p><a href="http://jabrcx.github.com/logstats">http://jabrcx.github.com/logstats</a></p>
 ]]></content>
   </entry>
   
