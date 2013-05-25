@@ -9,8 +9,8 @@ categories:
 For summarizing and visualizing data in log files.
 The code is at:
 
-<https://github.com/jabrcx/logstats/>
+<https://github.com/jabrcx/logstats>
 
 and a write-up with examples is at:
 
-<http://jabrcx.github.com/logstats/>
+<http://jabrcx.github.com/logstats>
