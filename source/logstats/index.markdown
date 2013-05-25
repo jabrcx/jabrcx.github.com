@@ -281,236 +281,240 @@ There are many more command line options for tweaking the behavior, e.g. plot tw
 See `logstats --help` for details:
 
 ``` text logstat --help
-    NAME
-        logstats - summarize and visualize data in log files
+NAME
+    logstats - summarize and visualize data in log files
 
-    SYNOPSIS
-        logstats --count|--sum|--average LABEL:REGEX ... [-t SECONDS] [FILENAME...]
+SYNOPSIS
+    logstats --count|--sum|--average LABEL:REGEX ... [-t SECONDS] [FILENAME...]
 
-    DESCRIPTION
-        This script takes FILENAMEs where each line starts with some sort of 
-        timestamp, searches for text that matchs the given REGEXs (regular 
-        expressions) and prints and/or plots statistics about their occurrences.
+DESCRIPTION
+    This script takes FILENAMEs where each line starts with some sort of 
+    timestamp, searches for text that matchs the given REGEXs (regular 
+    expressions) and prints and/or plots statistics about their occurrences.
 
-        For each time bin, if the REGEX was specified as a --count, it will print 
-        the total number of occurrences of the message.  If the REGEX was specified 
-        with --sum, it will print out the sum of the relevant number in the message 
-        (the REGEX must use grouping so that group(1) extracts a numeric 
-        substring).  For --average, it will print the average of the value. REGEX 
-        syntax is that of the python re module.  The LABEL is used to identify the 
-        statistic in the output.
+    For each time bin, if the REGEX was specified as a --count, it will print 
+    the total number of occurrences of the message.  If the REGEX was specified 
+    with --sum, it will print out the sum of the relevant number in the message 
+    (the REGEX must use grouping so that group(1) extracts a numeric 
+    substring).  For --average, it will print the average of the value. REGEX 
+    syntax is that of the python re module.  The LABEL is used to identify the 
+    statistic in the output.
 
-        Events do not have to be mutually exclusive -- each line is searched for 
-        all events.  As a consequence, if you want to, e.g., both count the number 
-        of occurrences of an event and average values in the messages, specify it 
-        twice, once with -c and once with -a.
+    Events do not have to be mutually exclusive -- each line is searched for 
+    all events.  As a consequence, if you want to, e.g., both count the number 
+    of occurrences of an event and average values in the messages, specify it 
+    twice, once with -c and once with -a.
 
-        By default, the script makes a time series plot.  If --totals-also or 
-        --totals-only is given, it will include stats for the entire time range.
+    By default, the script makes a time series plot.  If --totals-also or 
+    --totals-only is given, it will include stats for the entire time range.
 
-        If --show-plots or --save-plots is given, this will also plot the values 
-        (requires matplotlib).
+    If --show-plots or --save-plots is given, this will also plot the values 
+    (requires matplotlib).
 
-        Multiple FILENAMES may be given.  The lines from all files or collated into 
-        chronological order (if lines from more than one file specify the same 
-        time, lines are taken in the order the filenames are given).  The lines in 
-        each individual file are assumed to be in chronological order.  If no 
-        FILENAME is given, stdin is used.  Stdin may also be explicity specified 
-        using the FILENAME `-'.
+    Multiple FILENAMES may be given.  The lines from all files or collated into 
+    chronological order (if lines from more than one file specify the same 
+    time, lines are taken in the order the filenames are given).  The lines in 
+    each individual file are assumed to be in chronological order.  If no 
+    FILENAME is given, stdin is used.  Stdin may also be explicity specified 
+    using the FILENAME `-'.
 
-        This script only recognizes a select few time formats (use 
-        --print-time-formats to display them).  You can add a format with the 
-        --time-format option.  If the beginning of the a line does not match one of 
-        the known time formats, this tries to use the dateutil module, if installed 
-        (it usually comes along with matplotlib), to parse the time.  This can be 
-        easier than specifying the exact format, but there are some drawbacks:
+    This script only recognizes a select few time formats (use 
+    --print-time-formats to display them).  You can add a format with the 
+    --time-format option.  If the beginning of the a line does not match one of 
+    the known time formats, this tries to use the dateutil module, if installed 
+    (it usually comes along with matplotlib), to parse the time.  This can be 
+    easier than specifying the exact format, but there are some drawbacks:
 
-            o  The entire log entries are searched for event REGEXs, not just the 
-               part after the timestamp (so the REGEX must be constructed to not 
-               match any part of the timestamp).
+        o  The entire log entries are searched for event REGEXs, not just the 
+           part after the timestamp (so the REGEX must be constructed to not 
+           match any part of the timestamp).
 
-            o  The format of times printed by this script will not match those 
-               found in the log.
+        o  The format of times printed by this script will not match those 
+           found in the log.
 
-            o  Using dateutil is about three times slower than an explicit format 
-               (at least for the specific formats I've tried).
+        o  Using dateutil is about three times slower than an explicit format 
+           (at least for the specific formats I've tried).
 
-        The dateutil parse method is called with fuzzy=True, so unknown tokens are 
-        ignored, but you can drastically improve it's chances by giving this script 
-        the --time-nchars option to specify a the length of string to look at.
+    The dateutil parse method is called with fuzzy=True, so unknown tokens are 
+    ignored, but you can drastically improve it's chances by giving this script 
+    the --time-nchars option to specify a the length of string to look at.
 
-        If there are any parsing errors trying to extract a time, numeric value to 
-        include in an average, etc., this script will print a warning message to 
-        stderr and move on to the next log entry.
+    If there are any parsing errors trying to extract a time, numeric value to 
+    include in an average, etc., this script will print a warning message to 
+    stderr and move on to the next log entry.
 
-        All times have at best a resolution of whole seconds.  All counts are 
-        processed as integers, and all averages are processed as floats.  For sums, 
-        if the regex group extracts something with a `.', it's processed as a 
-        float, else it's processed as an int.
+    All times have at best a resolution of whole seconds.  All counts are 
+    processed as integers, and all averages are processed as floats.  For sums, 
+    if the regex group extracts something with a `.', it's processed as a 
+    float, else it's processed as an int.
 
-        When plotting, the matplotlib module is particularly picky about timezones. 
-        You probably want to put something like `timezone: US/Eastern' in your 
-        matplotlibrc file (the default is UTC and causes matplotlib to interpret 
-        the numbers differently than the rest of this script).
+    When plotting, the matplotlib module is particularly picky about timezones. 
+    You probably want to put something like `timezone: US/Eastern' in your 
+    matplotlibrc file (the default is UTC and causes matplotlib to interpret 
+    the numbers differently than the rest of this script).
 
-    OPTIONS
-        -c, --count LABEL:REGEX
-            An event type to count.
+OPTIONS
+    -c, --count LABEL:REGEX
+        An event type to count.
 
-        -s, --sum LABEL:REGEX
-            An event type with a numeric value to sum.  The regex should use groups 
-            such that group(1) is the numeric value.
+    -s, --sum LABEL:REGEX
+        An event type with a numeric value to sum.  The regex should use groups 
+        such that group(1) is the numeric value.
 
-        -a, --average LABEL:REGEX
-            An event type with a numeric value to average.  The regex should use 
-            groups such that group(1) is the numeric value.
+    -a, --average LABEL:REGEX
+        An event type with a numeric value to average.  The regex should use 
+        groups such that group(1) is the numeric value.
 
-        -t, --interval
-            The time bin width, in seconds.  Default is 300 (5 minutes).  The 
-            special strings "minute", "hour", "day", "week", "month", and "year" 
-            can be used, too.
+    -t, --interval
+        The time bin width, in seconds.  Default is 300 (5 minutes).  The 
+        special strings "minute", "hour", "day", "week", "month", and "year" 
+        can be used, too.
 
-        --tstart TIMESTAMP
-            Restrict processing to times later than or equal to the given time.  
-            The TIMESTAMP is parsed the same way as a log entry is (it doesn't have 
-            to match the format in the log).
+    --tstart TIMESTAMP
+        Restrict processing to times later than or equal to the given time.  
+        The TIMESTAMP is parsed the same way as a log entry is (it doesn't have 
+        to match the format in the log).
 
-        --tend TIMESTAMP
-            Restrict processing to times earlier than the given time.  The 
-            TIMESTAMP is parsed the same way a log entry is (it doesn't have to 
-            match the format in the log).
+    --tend TIMESTAMP
+        Restrict processing to times earlier than the given time.  The 
+        TIMESTAMP is parsed the same way a log entry is (it doesn't have to 
+        match the format in the log).
 
-        --totals-also
-            Also print/plot the statistics for the entire time range, after the 
-            breakdown by bin.
+    --totals-also
+        Also print/plot the statistics for the entire time range, after the 
+        breakdown by bin.
 
-        --totals-only
-            Like --totals-also, but only print/plot the totals, no breakdown by 
-            bin.
+    --totals-only
+        Like --totals-also, but only print/plot the totals, no breakdown by 
+        bin.
 
-        --cumulative
-            For time series statistics, report cumulative values rather than values 
-            for each time bin independently.
+    --cumulative
+        For time series statistics, report cumulative values rather than values 
+        for each time bin independently.
 
-        --breakdown-by-field-number FIELD_NUMBER
-            For the given statistics, break them down by unique values that appear 
-            in the given FIELD_NUMBER.  This saves pre-inspecting the field and 
-            explicitly creating a separate statistic for each.  Splitting is on 
-            whitespace; indexing starts at 1 and includes the timestamp part.
+    --breakdown-by-field-number FIELD_NUMBER
+        For the given statistics, break them down by unique values that appear 
+        in the given FIELD_NUMBER.  This saves pre-inspecting the field and 
+        explicitly creating a separate statistic for each.  Splitting is on 
+        whitespace; indexing starts at 1 and includes the timestamp part.
 
-        --breakdown-threshold-percent PERCENT
-            When --breakdown-by-field-number is provided, group all breakdowns with 
-            total value that ends up being less than the given PERCENT of the 
-            entire value into a single entry labeled `OTHER'.
+    --breakdown-threshold-percent PERCENT
+        When --breakdown-by-field-number is provided, group all breakdowns with 
+        total value that ends up being less than the given PERCENT of the 
+        entire value into a single entry labeled `OTHER'.
 
-        --show-plots
-            Display plots of the statistics (requires matplotlib and an X display).
+    --show-plots
+        Display plots of the statistics (requires matplotlib and an X display).
 
-        --save-plots
-            Save plots of the statistics (requires matplotlib and an X display).
+    --save-plots
+        Save plots of the statistics (requires matplotlib and an X display).
 
-        --extract
-            Write matching log entries to stdout; do not compute statistics.  If no 
-            event types are given, write all lines to stdout.  Use this in 
-            combination with --tstart and --tend to extract ranges from logs.  Note 
-            that lines from which a time cannot be parsed are *not* included in the 
-            output.
+    --extract
+        Write matching log entries to stdout; do not compute statistics.  If no 
+        event types are given, write all lines to stdout.  Use this in 
+        combination with --tstart and --tend to extract ranges from logs.  Note 
+        that lines from which a time cannot be parsed are *not* included in the 
+        output.
 
-        --no-headers
-            In the text output, don't print out the lines of identifying names for 
-            the statistics.
+    --no-headers
+        In the text output, don't print out the lines of identifying names for 
+        the statistics.
 
-        --title TITLE
-            Override the default title for the plot(s).
+    --title TITLE
+        Override the default title for the plot(s).
 
-        --totals-in-title
-            If there is only one statistic being plotted, add the total count/sum 
-            or overall average (depending on statistic being plotted) to the title. 
-            The applies whether --title is supplied or auto-generated.
+    --totals-in-title
+        If there is only one statistic being plotted, add the total count/sum 
+        or overall average (depending on statistic being plotted) to the title. 
+        The applies whether --title is supplied or auto-generated.
 
-        --totals-in-legend
-            Add the total count/sum or overall average (depending on the statistic 
-            being plotted) for each statistic in the legend.  This is independent 
-            of --totals-also and --totals-only.
+    --totals-in-legend
+        Add the total count/sum or overall average (depending on the statistic 
+        being plotted) for each statistic in the legend.  This is independent 
+        of --totals-also and --totals-only.
 
-        --bar-charts
-            If plotting statistics of totals, use vertical bar charts instead of the
-            default pie charts.
+    --bar-charts
+        If plotting statistics of totals, use vertical bar charts instead of the
+        default pie charts.
 
-        --ymin VALUE
-            The minimum value for the y-axis range.  Default is to autoscale.
+    --ymin VALUE
+        The minimum value for the y-axis range.  Default is to autoscale.
 
-        --ymax VALUE
-            The maximum value for the y-axis range.  Default is to autoscale.
+    --ymax VALUE
+        The maximum value for the y-axis range.  Default is to autoscale.
 
-        --units UNITS_STRING
-            Label for the Y axis, title, etc. when applicable (sums and averages). 
-            This does not do any manipulation of the values; it's just a simple 
-            label.  See also --units-conversion-factor.
+    --units UNITS_STRING
+        Label for the Y axis, title, etc. when applicable (sums and averages). 
+        This does not do any manipulation of the values; it's just a simple 
+        label.  See also --units-conversion-factor.
 
-        --units-conversion-factor FACTOR
-            Multiply sums and averages by the given conversion FACTOR.  This can be 
-            a numerical value in any format that python's int() or float() can 
-            parse.  There is a set of special shortcut strings available, too; see 
-            --print-units-conversion-factors.
+    --units-conversion-factor FACTOR
+        Multiply sums and averages by the given conversion FACTOR.  This can be 
+        a numerical value in any format that python's int() or float() can 
+        parse.  There is a set of special shortcut strings available, too; see 
+        --print-units-conversion-factors.
 
-        --print-units-conversion-factors
-            Print out the available --units-conversion-factor shortcut strings 
-            ('seconds-to-minutes', 'bytes-to-gigabytes', etc.) and their associated 
-            values.
+    --print-units-conversion-factors
+        Print out the available --units-conversion-factor shortcut strings 
+        ('seconds-to-minutes', 'bytes-to-gigabytes', etc.) and their associated 
+        values.
 
-        --error-bars-off
-            By default, if one average is being plotted, error bars will be 
-            plotted.  Use this option to not do that.
+    --error-bars-off
+        By default, if one average is being plotted, error bars will be 
+        plotted.  Use this option to not do that.
 
-        --error-bars-on
-            By default, if more than one average is being plotted, error bars will 
-            not be plotted.  Use this option to add them.
+    --error-bars-on
+        By default, if more than one average is being plotted, error bars will 
+        not be plotted.  Use this option to add them.
 
-        --legend-on
-            By default, if only one statistic is being plotted, no legend will be 
-            drawn.  Use this option to add it.
+    --legend-on
+        By default, if only one statistic is being plotted, no legend will be 
+        drawn.  Use this option to add it.
 
-        --legend-off
-            By default, if more than one statistic is being plotted, a legend will 
-            be drawn.  Use this option to remove it.
+    --legend-off
+        By default, if more than one statistic is being plotted, a legend will 
+        be drawn.  Use this option to remove it.
 
-        --legend-location LOCATION
-            Force the legend to be in the specific location.  LOCATION must be one 
-            of the accepted matplotlib values ("right", "center", "lower left", 
-            etc., or their numerical equivalents) or "left", which is taken to mean 
-            "upper left" (why does matplotlib have "right" but no "left"?).  
-            Default is "best", but sometimes that doesn't look so good.
+    --legend-location LOCATION
+        Force the legend to be in the specific location.  LOCATION must be one 
+        of the accepted matplotlib values ("right", "center", "lower left", 
+        etc., or their numerical equivalents) or "left", which is taken to mean 
+        "upper left" (why does matplotlib have "right" but no "left"?).  
+        Default is "best", but sometimes that doesn't look so good.
 
-        --time-format FORMAT
-            Add a format to the list of known formats.  Multiple --time-format 
-            options can be given to add multiple formats.  See --print-time-formats 
-            format details.
+    --time-format FORMAT
+        Add a format to the list of known formats.  Multiple --time-format 
+        options can be given to add multiple formats.  See --print-time-formats 
+        format details.
 
-        --time-nchars NUMBER
-            If the dateutil module is installed, use it instead of the specific 
-            formats.  Only look at the given NUMBER of leading characters when 
-            parsing the time.  The default is 30.
+    --time-nchars NUMBER
+        If the dateutil module is installed, use it instead of the specific 
+        formats.  Only look at the given NUMBER of leading characters when 
+        parsing the time.  The default is 30.
 
-        --print-time-formats
-            Print the known time formats and exit.
+    --print-time-formats
+        Print the known time formats and exit.
 
-        -h, --help
-            Print this help.
-        
-        (The deprecated options --ylabel and --no-legend have been replaced by 
-        --units and --legend-off, respectively.)
+    -h, --help
+        Print this help.
 
-    EXAMPLES
-        Plot 5-second averages of a value that changes randomly every second (takes 60 seconds to run):
-            ( for i in {1..60}; do echo $(date) $RANDOM; sleep 1; done ) | logstats -a 'x: (\d+)' -t 5 --show-plots
+    (The deprecated options --ylabel and --no-legend have been replaced by 
+    --units and --legend-off, respectively.)
 
-        Count successful ssh logins:
-            logstats -c 'ssh_logins: ssh.*session opened' /var/log/messages
+EXAMPLES
+    See the following for a full write-up and detailed examples:
 
-        Extract a 24 hour period from a log that uses '%Y%m%d%H%M%S' format:
-            logstats --extract --time-format %Y%m%d%H%M%S --tstart 1004261200 --tend 1004271200 full.log > day.log
+        http://jabrcx.github.io/logstats
 
-    AUTHOR
-        John Brunelle
+    Plot 5-second averages of a value that changes randomly every second (takes 60 seconds to run):
+        ( for i in {1..60}; do echo $(date) $RANDOM; sleep 1; done ) | logstats -a 'x: (\d+)' -t 5 --show-plots
+
+    Count successful ssh logins:
+        logstats -c 'ssh_logins: ssh.*session opened' /var/log/messages
+
+    Extract a 24 hour period from a log that uses '%Y%m%d%H%M%S' format:
+        logstats --extract --time-format %Y%m%d%H%M%S --tstart 1004261200 --tend 1004271200 full.log > day.log
+
+AUTHOR
+    Copyright (c) 2013, John A. Brunelle
 ```
