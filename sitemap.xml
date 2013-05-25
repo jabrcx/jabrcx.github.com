@@ -1,6 +1,10 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <urlset xmlns='http://www.sitemaps.org/schemas/sitemap/0.9'>
     <url>
+        <loc>http://jabrcx.github.com/blog/2013/05/24/published-logstats/</loc>
+        <lastmod>2013-05-24T21:25:38-04:00</lastmod>
+    </url>
+    <url>
         <loc>http://jabrcx.github.com/logstats/</loc>
         <lastmod>2013-05-24T21:07:09-04:00</lastmod>
     </url>
@@ -10,11 +14,11 @@
     </url>
     <url>
         <loc>http://jabrcx.github.com/</loc>
-        <lastmod>2013-04-25T13:51:19-04:00</lastmod>
+        <lastmod>2013-05-24T21:25:38-04:00</lastmod>
     </url>
     <url>
         <loc>http://jabrcx.github.com/blog/archives/</loc>
-        <lastmod>2013-04-25T13:51:19-04:00</lastmod>
+        <lastmod>2013-05-24T21:25:38-04:00</lastmod>
     </url>
     <url>
         <loc>http://jabrcx.github.com/robots.txt</loc>
