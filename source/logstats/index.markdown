@@ -32,7 +32,7 @@ The Basics
 logstats can count event occurrences and it can sum and/or average numeric data in the log entries.
 The basic way to invoke logstats is:
 
-``` bash Basic Sytax
+``` bash Basic Syntax
 	$ logstats  --TYPE LABEL:REGEX  FILENAME
 ```
 
