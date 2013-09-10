@@ -7,7 +7,7 @@ sharing: true
 footer: true
 ---
 
-You have data buried in log files.
+Say you have data buried in log files.
 Need to identify some trends?
 Need to extract, summarize, and analyze numbers included in the log entries?
 Want something quick and easy without the need for an entire infrastructure for log analysis?
@@ -19,7 +19,7 @@ logstats aggregates statistics about the events by regular time interval &mdash;
 By default it prints the data to the screen; if you have matplotlib installed it can plot it, too.
 It can also compute overall statistics in addition to the time series statistics.
 
-logstats is a standalone, command-line script, written in python, with no other external dependencies other than matplotlib (and that's only needed for extra plotting in addition to the default text output).
+logstats is a standalone, command-line script, written in python, with no other external dependencies other than matplotlib, and that's only needed for extra plotting in addition to the default text output.
 It's available at:
 
 <https://github.com/jabrcx/logstats>
