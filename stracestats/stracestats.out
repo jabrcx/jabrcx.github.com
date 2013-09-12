@@ -1,0 +1,180 @@
+accept
+	    num calls:        1   0% of syscalls
+	     tot time: 0.000009   0% of syscall time,  0% of wall time
+	avg call time: 0.000009
+	          +/-: 0.000000
+	med call time: 0.000009
+
+	 min/hist/max: 0.000009 [0 0 0 0 0 1 0 0 0 0] 0.000009
+
+bind
+	    num calls:        1   0% of syscalls
+	     tot time: 0.000009   0% of syscall time,  0% of wall time
+	avg call time: 0.000009
+	          +/-: 0.000000
+	med call time: 0.000009
+
+	 min/hist/max: 0.000009 [0 0 0 0 0 1 0 0 0 0] 0.000009
+
+arch_prctl
+	    num calls:        1   0% of syscalls
+	     tot time: 0.000010   0% of syscall time,  0% of wall time
+	avg call time: 0.000010
+	          +/-: 0.000000
+	med call time: 0.000010
+
+	 min/hist/max: 0.000010 [0 0 0 0 1 0 0 0 0 0] 0.000010
+
+munmap
+	    num calls:        1   0% of syscalls
+	     tot time: 0.000010   0% of syscall time,  0% of wall time
+	avg call time: 0.000010
+	          +/-: 0.000000
+	med call time: 0.000010
+
+	 min/hist/max: 0.000010 [0 0 0 0 1 0 0 0 0 0] 0.000010
+
+fstat
+	    num calls:        2   0% of syscalls
+	     tot time: 0.000010   0% of syscall time,  0% of wall time
+	avg call time: 0.000005
+	          +/-: 0.000000
+	med call time: 0.000005
+
+	 min/hist/max: 0.000005 [0 0 0 0 0 2 0 0 0 0] 0.000005
+
+listen
+	    num calls:        1   0% of syscalls
+	     tot time: 0.000010   0% of syscall time,  0% of wall time
+	avg call time: 0.000010
+	          +/-: 0.000000
+	med call time: 0.000010
+
+	 min/hist/max: 0.000010 [0 0 0 0 1 0 0 0 0 0] 0.000010
+
+close
+	    num calls:        2   0% of syscalls
+	     tot time: 0.000011   0% of syscall time,  0% of wall time
+	avg call time: 0.000005
+	          +/-: 0.000000
+	med call time: 0.000005
+
+	 min/hist/max: 0.000005 [1 0 0 0 0 0 0 0 0 1] 0.000006
+
+access
+	    num calls:        1   0% of syscalls
+	     tot time: 0.000017   0% of syscall time,  0% of wall time
+	avg call time: 0.000017
+	          +/-: 0.000000
+	med call time: 0.000017
+
+	 min/hist/max: 0.000017 [0 0 0 0 0 1 0 0 0 0] 0.000017
+
+socket
+	    num calls:        2   0% of syscalls
+	     tot time: 0.000018   0% of syscall time,  0% of wall time
+	avg call time: 0.000009
+	          +/-: 0.000001
+	med call time: 0.000009
+
+	 min/hist/max: 0.000008 [1 0 0 0 0 0 0 0 0 1] 0.000010
+
+mprotect
+	    num calls:        3   0% of syscalls
+	     tot time: 0.000023   0% of syscall time,  0% of wall time
+	avg call time: 0.000008
+	          +/-: 0.000000
+	med call time: 0.000008
+
+	 min/hist/max: 0.000007 [1 0 0 0 0 0 0 0 0 2] 0.000008
+
+connect
+	    num calls:        1   0% of syscalls
+	     tot time: 0.000037   0% of syscall time,  0% of wall time
+	avg call time: 0.000037
+	          +/-: 0.000000
+	med call time: 0.000037
+
+	 min/hist/max: 0.000037 [0 0 0 0 1 0 0 0 0 0] 0.000037
+
+brk
+	    num calls:        3   0% of syscalls
+	     tot time: 0.000044   0% of syscall time,  0% of wall time
+	avg call time: 0.000015
+	          +/-: 0.000012
+	med call time: 0.000006
+
+	 min/hist/max: 0.000006 [2 0 0 0 0 0 0 0 0 1] 0.000032
+
+mmap
+	    num calls:        7   0% of syscalls
+	     tot time: 0.000163   0% of syscall time,  0% of wall time
+	avg call time: 0.000023
+	          +/-: 0.000039
+	med call time: 0.000007
+
+	 min/hist/max: 0.000006 [6 0 0 0 0 0 0 0 0 1] 0.000118
+
+stat
+	    num calls:       24   0% of syscalls
+	     tot time: 0.000209   0% of syscall time,  0% of wall time
+	avg call time: 0.000009
+	          +/-: 0.000003
+	med call time: 0.000008
+
+	 min/hist/max: 0.000007 [19  1  3  0  0  0  0  0  0  1] 0.000022
+
+open
+	    num calls:       29   0% of syscalls
+	     tot time: 0.000299   0% of syscall time,  0% of wall time
+	avg call time: 0.000010
+	          +/-: 0.000006
+	med call time: 0.000009
+
+	 min/hist/max: 0.000008 [27  1  0  0  0  0  0  0  0  1] 0.000044
+
+execve
+	    num calls:        1   0% of syscalls
+	     tot time: 0.002719   0% of syscall time,  0% of wall time
+	avg call time: 0.002719
+	          +/-: 0.000000
+	med call time: 0.002719
+
+	 min/hist/max: 0.002719 [0 0 0 0 1 0 0 0 0 0] 0.002719
+
+write
+	    num calls:    10000  25% of syscalls
+	     tot time: 0.065425   9% of syscall time,  4% of wall time
+	avg call time: 0.000007
+	          +/-: 0.000001
+	med call time: 0.000007
+
+	 min/hist/max: 0.000005 [9933   46   16    3    1    0    0    0    0    1] 0.000027
+
+recvfrom
+	    num calls:    10000  25% of syscalls
+	     tot time: 0.098670  14% of syscall time,  6% of wall time
+	avg call time: 0.000010
+	          +/-: 0.000002
+	med call time: 0.000010
+
+	 min/hist/max: 0.000006 [9992    3    0    0    2    0    0    2    0    1] 0.000110
+
+sendto
+	    num calls:    10000  25% of syscalls
+	     tot time: 0.101630  15% of syscall time,  6% of wall time
+	avg call time: 0.000010
+	          +/-: 0.000001
+	med call time: 0.000010
+
+	 min/hist/max: 0.000008 [9986   11    0    0    0    2    0    0    0    1] 0.000089
+
+read
+	    num calls:    10001  25% of syscalls
+	     tot time: 0.431161  62% of syscall time, 25% of wall time
+	avg call time: 0.000043
+	          +/-: 0.000037
+	med call time: 0.000017
+
+	 min/hist/max: 0.000005 [5001    0    0    0 4982   10    5    1    0    2] 0.000178
+

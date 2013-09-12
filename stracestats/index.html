@@ -1,0 +1,762 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>stracestats &mdash; Summarize and Visualize Data in strace Output - jabrcx</title>
+  <meta name="author" content="jabrcx">
+
+  
+  <meta name="description" content="stracestats &mdash; Summarize and Visualize Data in strace Output Sep 6th, 2013 strace is an invaluable tool for figuring out what a Linux process &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://jabrcx.github.com/stracestats">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="jabrcx" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">jabrcx</a></h1>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:jabrcx.github.com" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article role="article">
+  
+  <header>
+    <h1 class="entry-title">stracestats &mdash; Summarize and Visualize Data in strace Output</h1>
+    <p class="meta">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-09-06T20:20:00-04:00" pubdate data-updated="true">Sep 6<span>th</span>, 2013</time></p>
+  </header>
+  
+  <p>strace is an invaluable tool for figuring out what a Linux process is doing.
+With its options for logging how much time is spent in each system call, it&#8217;s also an easy way to profile i/o-bound programs and components in distributed systems.
+However, sometimes it can be a challenge getting the big picture from all the data, without losing details (such as you do with <code>strace -c</code>).
+That&#8217;s what stracestats is for &mdash; it aggregates and reports statistics about the system calls in the output of an strace run.</p>
+
+<p>Specifically, for each system call that appears it&#8217;ll report:</p>
+
+<ul>
+<li>occurrences (number of times called, percentage of overall calls made)</li>
+<li>time spent in the call (total time, percentage of system call time, percentage of wall time)</li>
+<li>average call time and standard deviation</li>
+<li>median call time</li>
+<li>a 10-bin histogram of call times, from min to max</li>
+</ul>
+
+
+<p>It can report separate statistics for each call with a different first argument (helpful for all those calls that take a file/socket descriptor), and it can make plots of the distribution of time spent in each call.</p>
+
+<p>stracestats is written in python and requires only numpy and, if plotting is desired, matplotlib.
+It&#8217;s available at:</p>
+
+<p><a href="https://github.com/jabrcx/stracestats">https://github.com/jabrcx/stracestats</a></p>
+
+<hr />
+
+<h2>The Basics</h2>
+
+<p>stracestats requires the strace be made with both timestamps and time-in-call recorded, e.g.:</p>
+
+<figure class='code'><figcaption><span>How to Run a Compatible Strace</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="nv">$ </span>strace -tt -T -o STRACE_OUTPUT_FILE ...
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The <code>-t</code> and <code>-ttt</code> alternatives to <code>-tt</code>, for different timestamp formats, are also acceptable.
+stracestats works with any combination of <code>-f</code>, <code>-ff</code> and <code>-o</code>, too (i.e. the output may have extra process id info prepended).</p>
+
+<p>Usage is best demonstrated by example, which requires an example program.
+Take this example, <a href="io.c">io.c</a>.
+It creates a connected pair of tcp sockets and pushes data through them.
+To make things a little interesting, it alternately reads from <code>/dev/zero</code> and <code>/dev/urandom</code>; it writes to <code>/dev/null</code>.
+The heart of the program is this loop:</p>
+
+<figure class='code'><figcaption><span>Example I/O Loop</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="k">for</span> <span class="p">(</span><span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span> <span class="n">i</span><span class="o">&lt;</span><span class="n">LOOP_COUNT</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>  <span class="k">if</span> <span class="p">(</span><span class="n">i</span><span class="o">%</span><span class="mi">2</span><span class="o">==</span><span class="mi">0</span><span class="p">)</span>
+</span><span class='line'>      <span class="n">read</span><span class="p">(</span><span class="n">fd_zero</span><span class="p">,</span> <span class="n">msg</span><span class="p">,</span> <span class="n">MSG_SIZE</span><span class="p">);</span>
+</span><span class='line'>  <span class="k">else</span>
+</span><span class='line'>      <span class="nf">read</span><span class="p">(</span><span class="n">fd_urnd</span><span class="p">,</span> <span class="n">msg</span><span class="p">,</span> <span class="n">MSG_SIZE</span><span class="p">);</span>
+</span><span class='line'>  <span class="n">send</span><span class="p">(</span><span class="n">fd_sock_srvr</span><span class="p">,</span> <span class="n">msg</span><span class="p">,</span> <span class="n">MSG_SIZE</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+</span><span class='line'>  <span class="n">recv</span><span class="p">(</span><span class="n">fd_sock_clnt</span><span class="p">,</span> <span class="n">msg</span><span class="p">,</span> <span class="n">MSG_SIZE</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+</span><span class='line'>  <span class="n">write</span><span class="p">(</span><span class="n">fd_null</span><span class="p">,</span> <span class="n">msg</span><span class="p">,</span> <span class="n">MSG_SIZE</span><span class="p">);</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>When compiled and straced, for example with:</p>
+
+<figure class='code'><figcaption><span>Compile and strace</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="nv">$ </span>gcc -o io io.c
+</span><span class='line'><span class="nv">$ </span>strace -tt -T -o strace.out ./io
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>you get output like the following:</p>
+
+<figure class='code'><figcaption><span>Example strace output</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>...
+</span><span class='line'>20:16:23.341929 read(6, &quot;\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0&quot;..., 512) = 512 &lt;0.000006&gt;
+</span><span class='line'>20:16:23.341970 sendto(4, &quot;\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0&quot;..., 512, 0, NULL, 0) = 512 &lt;0.000010&gt;
+</span><span class='line'>20:16:23.342007 recvfrom(5, &quot;\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0&quot;..., 512, 0, NULL, NULL) = 512 &lt;0.000010&gt;
+</span><span class='line'>20:16:23.342043 write(8, &quot;\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0&quot;..., 512) = 512 &lt;0.000007&gt;
+</span><span class='line'>20:16:23.342073 read(7, &quot;\340$\0\245\333#\337\242e\341\354\324\356\330\272\2775\240B\265\363d\260\256\314_\245t\357N\323\310&quot;..., 512) = 512 &lt;0.000077&gt;
+</span><span class='line'>20:16:23.342176 sendto(4, &quot;\340$\0\245\333#\337\242e\341\354\324\356\330\272\2775\240B\265\363d\260\256\314_\245t\357N\323\310&quot;..., 512, 0, NULL, 0) = 512 &lt;0.000010&gt;
+</span><span class='line'>20:16:23.342211 recvfrom(5, &quot;\340$\0\245\333#\337\242e\341\354\324\356\330\272\2775\240B\265\363d\260\256\314_\245t\357N\323\310&quot;..., 512, 0, NULL, NULL) = 512 &lt;0.000010&gt;
+</span><span class='line'>20:16:23.342248 write(8, &quot;\340$\0\245\333#\337\242e\341\354\324\356\330\272\2775\240B\265\363d\260\256\314_\245t\357N\323\310&quot;..., 512) = 512 &lt;0.000007&gt;
+</span><span class='line'>...
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>stracestats will take that and generate a report, with system calls listed in order of increasing relevance:</p>
+
+<figure class='code'><figcaption><span>stracestats Output</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+<span class='line-number'>47</span>
+<span class='line-number'>48</span>
+<span class='line-number'>49</span>
+<span class='line-number'>50</span>
+<span class='line-number'>51</span>
+<span class='line-number'>52</span>
+<span class='line-number'>53</span>
+<span class='line-number'>54</span>
+<span class='line-number'>55</span>
+<span class='line-number'>56</span>
+<span class='line-number'>57</span>
+<span class='line-number'>58</span>
+<span class='line-number'>59</span>
+<span class='line-number'>60</span>
+<span class='line-number'>61</span>
+<span class='line-number'>62</span>
+<span class='line-number'>63</span>
+<span class='line-number'>64</span>
+<span class='line-number'>65</span>
+<span class='line-number'>66</span>
+<span class='line-number'>67</span>
+<span class='line-number'>68</span>
+<span class='line-number'>69</span>
+<span class='line-number'>70</span>
+<span class='line-number'>71</span>
+<span class='line-number'>72</span>
+<span class='line-number'>73</span>
+<span class='line-number'>74</span>
+<span class='line-number'>75</span>
+<span class='line-number'>76</span>
+<span class='line-number'>77</span>
+<span class='line-number'>78</span>
+<span class='line-number'>79</span>
+<span class='line-number'>80</span>
+<span class='line-number'>81</span>
+<span class='line-number'>82</span>
+<span class='line-number'>83</span>
+<span class='line-number'>84</span>
+<span class='line-number'>85</span>
+<span class='line-number'>86</span>
+<span class='line-number'>87</span>
+<span class='line-number'>88</span>
+<span class='line-number'>89</span>
+<span class='line-number'>90</span>
+<span class='line-number'>91</span>
+<span class='line-number'>92</span>
+<span class='line-number'>93</span>
+<span class='line-number'>94</span>
+<span class='line-number'>95</span>
+<span class='line-number'>96</span>
+<span class='line-number'>97</span>
+<span class='line-number'>98</span>
+<span class='line-number'>99</span>
+<span class='line-number'>100</span>
+<span class='line-number'>101</span>
+<span class='line-number'>102</span>
+<span class='line-number'>103</span>
+<span class='line-number'>104</span>
+<span class='line-number'>105</span>
+<span class='line-number'>106</span>
+<span class='line-number'>107</span>
+<span class='line-number'>108</span>
+<span class='line-number'>109</span>
+<span class='line-number'>110</span>
+<span class='line-number'>111</span>
+<span class='line-number'>112</span>
+<span class='line-number'>113</span>
+<span class='line-number'>114</span>
+<span class='line-number'>115</span>
+<span class='line-number'>116</span>
+<span class='line-number'>117</span>
+<span class='line-number'>118</span>
+<span class='line-number'>119</span>
+<span class='line-number'>120</span>
+<span class='line-number'>121</span>
+<span class='line-number'>122</span>
+<span class='line-number'>123</span>
+<span class='line-number'>124</span>
+<span class='line-number'>125</span>
+<span class='line-number'>126</span>
+<span class='line-number'>127</span>
+<span class='line-number'>128</span>
+<span class='line-number'>129</span>
+<span class='line-number'>130</span>
+<span class='line-number'>131</span>
+<span class='line-number'>132</span>
+<span class='line-number'>133</span>
+<span class='line-number'>134</span>
+<span class='line-number'>135</span>
+<span class='line-number'>136</span>
+<span class='line-number'>137</span>
+<span class='line-number'>138</span>
+<span class='line-number'>139</span>
+<span class='line-number'>140</span>
+<span class='line-number'>141</span>
+<span class='line-number'>142</span>
+<span class='line-number'>143</span>
+<span class='line-number'>144</span>
+<span class='line-number'>145</span>
+<span class='line-number'>146</span>
+<span class='line-number'>147</span>
+<span class='line-number'>148</span>
+<span class='line-number'>149</span>
+<span class='line-number'>150</span>
+<span class='line-number'>151</span>
+<span class='line-number'>152</span>
+<span class='line-number'>153</span>
+<span class='line-number'>154</span>
+<span class='line-number'>155</span>
+<span class='line-number'>156</span>
+<span class='line-number'>157</span>
+<span class='line-number'>158</span>
+<span class='line-number'>159</span>
+<span class='line-number'>160</span>
+<span class='line-number'>161</span>
+<span class='line-number'>162</span>
+<span class='line-number'>163</span>
+<span class='line-number'>164</span>
+<span class='line-number'>165</span>
+<span class='line-number'>166</span>
+<span class='line-number'>167</span>
+<span class='line-number'>168</span>
+<span class='line-number'>169</span>
+<span class='line-number'>170</span>
+<span class='line-number'>171</span>
+<span class='line-number'>172</span>
+<span class='line-number'>173</span>
+<span class='line-number'>174</span>
+<span class='line-number'>175</span>
+<span class='line-number'>176</span>
+<span class='line-number'>177</span>
+<span class='line-number'>178</span>
+<span class='line-number'>179</span>
+<span class='line-number'>180</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="nv">$ </span>stracestats strace.out
+</span><span class='line'>accept
+</span><span class='line'>            num calls:        1   0% of syscalls
+</span><span class='line'>             tot <span class="nb">time</span>: 0.000009   0% of syscall <span class="nb">time</span>,  0% of wall <span class="nb">time</span>
+</span><span class='line'><span class="nb">        </span>avg call <span class="nb">time</span>: 0.000009
+</span><span class='line'>                  +/-: 0.000000
+</span><span class='line'>        med call <span class="nb">time</span>: 0.000009
+</span><span class='line'>
+</span><span class='line'>         min/hist/max: 0.000009 <span class="o">[</span>0 0 0 0 0 1 0 0 0 0<span class="o">]</span> 0.000009
+</span><span class='line'>
+</span><span class='line'><span class="nb">bind</span>
+</span><span class='line'><span class="nb">            </span>num calls:        1   0% of syscalls
+</span><span class='line'>             tot <span class="nb">time</span>: 0.000009   0% of syscall <span class="nb">time</span>,  0% of wall <span class="nb">time</span>
+</span><span class='line'><span class="nb">        </span>avg call <span class="nb">time</span>: 0.000009
+</span><span class='line'>                  +/-: 0.000000
+</span><span class='line'>        med call <span class="nb">time</span>: 0.000009
+</span><span class='line'>
+</span><span class='line'>         min/hist/max: 0.000009 <span class="o">[</span>0 0 0 0 0 1 0 0 0 0<span class="o">]</span> 0.000009
+</span><span class='line'>
+</span><span class='line'>arch_prctl
+</span><span class='line'>            num calls:        1   0% of syscalls
+</span><span class='line'>             tot <span class="nb">time</span>: 0.000010   0% of syscall <span class="nb">time</span>,  0% of wall <span class="nb">time</span>
+</span><span class='line'><span class="nb">        </span>avg call <span class="nb">time</span>: 0.000010
+</span><span class='line'>                  +/-: 0.000000
+</span><span class='line'>        med call <span class="nb">time</span>: 0.000010
+</span><span class='line'>
+</span><span class='line'>         min/hist/max: 0.000010 <span class="o">[</span>0 0 0 0 1 0 0 0 0 0<span class="o">]</span> 0.000010
+</span><span class='line'>
+</span><span class='line'>munmap
+</span><span class='line'>            num calls:        1   0% of syscalls
+</span><span class='line'>             tot <span class="nb">time</span>: 0.000010   0% of syscall <span class="nb">time</span>,  0% of wall <span class="nb">time</span>
+</span><span class='line'><span class="nb">        </span>avg call <span class="nb">time</span>: 0.000010
+</span><span class='line'>                  +/-: 0.000000
+</span><span class='line'>        med call <span class="nb">time</span>: 0.000010
+</span><span class='line'>
+</span><span class='line'>         min/hist/max: 0.000010 <span class="o">[</span>0 0 0 0 1 0 0 0 0 0<span class="o">]</span> 0.000010
+</span><span class='line'>
+</span><span class='line'>fstat
+</span><span class='line'>            num calls:        2   0% of syscalls
+</span><span class='line'>             tot <span class="nb">time</span>: 0.000010   0% of syscall <span class="nb">time</span>,  0% of wall <span class="nb">time</span>
+</span><span class='line'><span class="nb">        </span>avg call <span class="nb">time</span>: 0.000005
+</span><span class='line'>                  +/-: 0.000000
+</span><span class='line'>        med call <span class="nb">time</span>: 0.000005
+</span><span class='line'>
+</span><span class='line'>         min/hist/max: 0.000005 <span class="o">[</span>0 0 0 0 0 2 0 0 0 0<span class="o">]</span> 0.000005
+</span><span class='line'>
+</span><span class='line'>listen
+</span><span class='line'>            num calls:        1   0% of syscalls
+</span><span class='line'>             tot <span class="nb">time</span>: 0.000010   0% of syscall <span class="nb">time</span>,  0% of wall <span class="nb">time</span>
+</span><span class='line'><span class="nb">        </span>avg call <span class="nb">time</span>: 0.000010
+</span><span class='line'>                  +/-: 0.000000
+</span><span class='line'>        med call <span class="nb">time</span>: 0.000010
+</span><span class='line'>
+</span><span class='line'>         min/hist/max: 0.000010 <span class="o">[</span>0 0 0 0 1 0 0 0 0 0<span class="o">]</span> 0.000010
+</span><span class='line'>
+</span><span class='line'>close
+</span><span class='line'>            num calls:        2   0% of syscalls
+</span><span class='line'>             tot <span class="nb">time</span>: 0.000011   0% of syscall <span class="nb">time</span>,  0% of wall <span class="nb">time</span>
+</span><span class='line'><span class="nb">        </span>avg call <span class="nb">time</span>: 0.000005
+</span><span class='line'>                  +/-: 0.000000
+</span><span class='line'>        med call <span class="nb">time</span>: 0.000005
+</span><span class='line'>
+</span><span class='line'>         min/hist/max: 0.000005 <span class="o">[</span>1 0 0 0 0 0 0 0 0 1<span class="o">]</span> 0.000006
+</span><span class='line'>
+</span><span class='line'>access
+</span><span class='line'>            num calls:        1   0% of syscalls
+</span><span class='line'>             tot <span class="nb">time</span>: 0.000017   0% of syscall <span class="nb">time</span>,  0% of wall <span class="nb">time</span>
+</span><span class='line'><span class="nb">        </span>avg call <span class="nb">time</span>: 0.000017
+</span><span class='line'>                  +/-: 0.000000
+</span><span class='line'>        med call <span class="nb">time</span>: 0.000017
+</span><span class='line'>
+</span><span class='line'>         min/hist/max: 0.000017 <span class="o">[</span>0 0 0 0 0 1 0 0 0 0<span class="o">]</span> 0.000017
+</span><span class='line'>
+</span><span class='line'>socket
+</span><span class='line'>            num calls:        2   0% of syscalls
+</span><span class='line'>             tot <span class="nb">time</span>: 0.000018   0% of syscall <span class="nb">time</span>,  0% of wall <span class="nb">time</span>
+</span><span class='line'><span class="nb">        </span>avg call <span class="nb">time</span>: 0.000009
+</span><span class='line'>                  +/-: 0.000001
+</span><span class='line'>        med call <span class="nb">time</span>: 0.000009
+</span><span class='line'>
+</span><span class='line'>         min/hist/max: 0.000008 <span class="o">[</span>1 0 0 0 0 0 0 0 0 1<span class="o">]</span> 0.000010
+</span><span class='line'>
+</span><span class='line'>mprotect
+</span><span class='line'>            num calls:        3   0% of syscalls
+</span><span class='line'>             tot <span class="nb">time</span>: 0.000023   0% of syscall <span class="nb">time</span>,  0% of wall <span class="nb">time</span>
+</span><span class='line'><span class="nb">        </span>avg call <span class="nb">time</span>: 0.000008
+</span><span class='line'>                  +/-: 0.000000
+</span><span class='line'>        med call <span class="nb">time</span>: 0.000008
+</span><span class='line'>
+</span><span class='line'>         min/hist/max: 0.000007 <span class="o">[</span>1 0 0 0 0 0 0 0 0 2<span class="o">]</span> 0.000008
+</span><span class='line'>
+</span><span class='line'>connect
+</span><span class='line'>            num calls:        1   0% of syscalls
+</span><span class='line'>             tot <span class="nb">time</span>: 0.000037   0% of syscall <span class="nb">time</span>,  0% of wall <span class="nb">time</span>
+</span><span class='line'><span class="nb">        </span>avg call <span class="nb">time</span>: 0.000037
+</span><span class='line'>                  +/-: 0.000000
+</span><span class='line'>        med call <span class="nb">time</span>: 0.000037
+</span><span class='line'>
+</span><span class='line'>         min/hist/max: 0.000037 <span class="o">[</span>0 0 0 0 1 0 0 0 0 0<span class="o">]</span> 0.000037
+</span><span class='line'>
+</span><span class='line'>brk
+</span><span class='line'>            num calls:        3   0% of syscalls
+</span><span class='line'>             tot <span class="nb">time</span>: 0.000044   0% of syscall <span class="nb">time</span>,  0% of wall <span class="nb">time</span>
+</span><span class='line'><span class="nb">        </span>avg call <span class="nb">time</span>: 0.000015
+</span><span class='line'>                  +/-: 0.000012
+</span><span class='line'>        med call <span class="nb">time</span>: 0.000006
+</span><span class='line'>
+</span><span class='line'>         min/hist/max: 0.000006 <span class="o">[</span>2 0 0 0 0 0 0 0 0 1<span class="o">]</span> 0.000032
+</span><span class='line'>
+</span><span class='line'>mmap
+</span><span class='line'>            num calls:        7   0% of syscalls
+</span><span class='line'>             tot <span class="nb">time</span>: 0.000163   0% of syscall <span class="nb">time</span>,  0% of wall <span class="nb">time</span>
+</span><span class='line'><span class="nb">        </span>avg call <span class="nb">time</span>: 0.000023
+</span><span class='line'>                  +/-: 0.000039
+</span><span class='line'>        med call <span class="nb">time</span>: 0.000007
+</span><span class='line'>
+</span><span class='line'>         min/hist/max: 0.000006 <span class="o">[</span>6 0 0 0 0 0 0 0 0 1<span class="o">]</span> 0.000118
+</span><span class='line'>
+</span><span class='line'>stat
+</span><span class='line'>            num calls:       24   0% of syscalls
+</span><span class='line'>             tot <span class="nb">time</span>: 0.000209   0% of syscall <span class="nb">time</span>,  0% of wall <span class="nb">time</span>
+</span><span class='line'><span class="nb">        </span>avg call <span class="nb">time</span>: 0.000009
+</span><span class='line'>                  +/-: 0.000003
+</span><span class='line'>        med call <span class="nb">time</span>: 0.000008
+</span><span class='line'>
+</span><span class='line'>         min/hist/max: 0.000007 <span class="o">[</span>19  1  3  0  0  0  0  0  0  1<span class="o">]</span> 0.000022
+</span><span class='line'>
+</span><span class='line'>open
+</span><span class='line'>            num calls:       29   0% of syscalls
+</span><span class='line'>             tot <span class="nb">time</span>: 0.000299   0% of syscall <span class="nb">time</span>,  0% of wall <span class="nb">time</span>
+</span><span class='line'><span class="nb">        </span>avg call <span class="nb">time</span>: 0.000010
+</span><span class='line'>                  +/-: 0.000006
+</span><span class='line'>        med call <span class="nb">time</span>: 0.000009
+</span><span class='line'>
+</span><span class='line'>         min/hist/max: 0.000008 <span class="o">[</span>27  1  0  0  0  0  0  0  0  1<span class="o">]</span> 0.000044
+</span><span class='line'>
+</span><span class='line'>execve
+</span><span class='line'>            num calls:        1   0% of syscalls
+</span><span class='line'>             tot <span class="nb">time</span>: 0.002719   0% of syscall <span class="nb">time</span>,  0% of wall <span class="nb">time</span>
+</span><span class='line'><span class="nb">        </span>avg call <span class="nb">time</span>: 0.002719
+</span><span class='line'>                  +/-: 0.000000
+</span><span class='line'>        med call <span class="nb">time</span>: 0.002719
+</span><span class='line'>
+</span><span class='line'>         min/hist/max: 0.002719 <span class="o">[</span>0 0 0 0 1 0 0 0 0 0<span class="o">]</span> 0.002719
+</span><span class='line'>
+</span><span class='line'>write
+</span><span class='line'>            num calls:    10000  25% of syscalls
+</span><span class='line'>             tot <span class="nb">time</span>: 0.065425   9% of syscall <span class="nb">time</span>,  4% of wall <span class="nb">time</span>
+</span><span class='line'><span class="nb">        </span>avg call <span class="nb">time</span>: 0.000007
+</span><span class='line'>                  +/-: 0.000001
+</span><span class='line'>        med call <span class="nb">time</span>: 0.000007
+</span><span class='line'>
+</span><span class='line'>         min/hist/max: 0.000005 <span class="o">[</span>9933   46   16    3    1    0    0    0    0    1<span class="o">]</span> 0.000027
+</span><span class='line'>
+</span><span class='line'>recvfrom
+</span><span class='line'>            num calls:    10000  25% of syscalls
+</span><span class='line'>             tot <span class="nb">time</span>: 0.098670  14% of syscall <span class="nb">time</span>,  6% of wall <span class="nb">time</span>
+</span><span class='line'><span class="nb">        </span>avg call <span class="nb">time</span>: 0.000010
+</span><span class='line'>                  +/-: 0.000002
+</span><span class='line'>        med call <span class="nb">time</span>: 0.000010
+</span><span class='line'>
+</span><span class='line'>         min/hist/max: 0.000006 <span class="o">[</span>9992    3    0    0    2    0    0    2    0    1<span class="o">]</span> 0.000110
+</span><span class='line'>
+</span><span class='line'>sendto
+</span><span class='line'>            num calls:    10000  25% of syscalls
+</span><span class='line'>             tot <span class="nb">time</span>: 0.101630  15% of syscall <span class="nb">time</span>,  6% of wall <span class="nb">time</span>
+</span><span class='line'><span class="nb">        </span>avg call <span class="nb">time</span>: 0.000010
+</span><span class='line'>                  +/-: 0.000001
+</span><span class='line'>        med call <span class="nb">time</span>: 0.000010
+</span><span class='line'>
+</span><span class='line'>         min/hist/max: 0.000008 <span class="o">[</span>9986   11    0    0    0    2    0    0    0    1<span class="o">]</span> 0.000089
+</span><span class='line'>
+</span><span class='line'><span class="nb">read</span>
+</span><span class='line'><span class="nb">            </span>num calls:    10001  25% of syscalls
+</span><span class='line'>             tot <span class="nb">time</span>: 0.431161  62% of syscall <span class="nb">time</span>, 25% of wall <span class="nb">time</span>
+</span><span class='line'><span class="nb">        </span>avg call <span class="nb">time</span>: 0.000043
+</span><span class='line'>                  +/-: 0.000037
+</span><span class='line'>        med call <span class="nb">time</span>: 0.000017
+</span><span class='line'>
+</span><span class='line'>         min/hist/max: 0.000005 <span class="o">[</span>5001    0    0    0 4982   10    5    1    0    2<span class="o">]</span> 0.000178
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This shows that <code>read</code> is the dominant system call, followed by <code>sendto</code>, <code>recvfrom</code>, etc.
+Note that the last line in each entry is a textual histogram showing the distribution of times spent in the system call &mdash; the numbers within the brackets are the counts for each bin in an equally-spaced 10-bin range between the minimum and maximum times seen.</p>
+
+<h2>Plotting</h2>
+
+<p>If you have matplotlib installed, stracestats can plot the histograms displayed in the text above, just add <code>--show-plots</code> or <code>--save-plots</code>, and, optionally, <code>--plot SYSTEM_CALL_NAME</code> to limit (or expand) what&#8217;s plotted.
+For example, to pop up a plot of the distribution in time spent in <code>read</code>:</p>
+
+<figure class='code'><figcaption><span>Plotting Example</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>stracestats --show-plots --plot <span class="nb">read </span>strace.out
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><img src="read.png" title="Plotting Example" alt="Plotting Example" /></p>
+
+<p>When plotted, the extreme bimodality of the <code>read</code> distribution is even more obvious.</p>
+
+<p>The <code>--plot</code> option can take the special arguments <code>ALL</code> or <code>TOPX</code> where <code>X</code> is a number.
+The latter case means only plot the <code>X</code> most relevant system calls.
+If no <code>--plot</code> is given, only the top three are plotted.</p>
+
+<h2>Breaking Down by the System Call&#8217;s First Argument</h2>
+
+<p>Often a system call is used on many different resources &mdash; e.g. the system calls that take a file or socket descriptor as their first argument.
+This is obviously what is creating the bimodality here &mdash; <code>read</code> is called both on <code>/dev/null</code> and <code>/dev/urandom</code>, with the latter PRNG being much more expensive.
+To separate the statistics for the calls based upon their first argument, add <code>--breakdown-by-arg</code>:</p>
+
+<figure class='code'><figcaption><span>&#8211;breakdown-by-arg example</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="nv">$ </span>stracestats --breakdown-by-arg strace.out
+</span><span class='line'>...
+</span><span class='line'><span class="nb">read</span><span class="o">(</span>6
+</span><span class='line'>            num calls:     5000  12% of syscalls
+</span><span class='line'>             tot <span class="nb">time</span>: 0.032761   5% of syscall <span class="nb">time</span>,  2% of wall <span class="nb">time</span>
+</span><span class='line'><span class="nb">        </span>avg call <span class="nb">time</span>: 0.000007
+</span><span class='line'>                  +/-: 0.000001
+</span><span class='line'>        med call <span class="nb">time</span>: 0.000007
+</span><span class='line'>
+</span><span class='line'>         min/hist/max: 0.000005 <span class="o">[</span>2297 2674   12   10    3    3    0    0    0    1<span class="o">]</span> 0.000017
+</span><span class='line'>
+</span><span class='line'>write<span class="o">(</span>8
+</span><span class='line'>            num calls:    10000  25% of syscalls
+</span><span class='line'>             tot <span class="nb">time</span>: 0.065425   9% of syscall <span class="nb">time</span>,  4% of wall <span class="nb">time</span>
+</span><span class='line'><span class="nb">        </span>avg call <span class="nb">time</span>: 0.000007
+</span><span class='line'>                  +/-: 0.000001
+</span><span class='line'>        med call <span class="nb">time</span>: 0.000007
+</span><span class='line'>
+</span><span class='line'>         min/hist/max: 0.000005 <span class="o">[</span>9933   46   16    3    1    0    0    0    0    1<span class="o">]</span> 0.000027
+</span><span class='line'>
+</span><span class='line'>recvfrom<span class="o">(</span>5
+</span><span class='line'>            num calls:    10000  25% of syscalls
+</span><span class='line'>             tot <span class="nb">time</span>: 0.098670  14% of syscall <span class="nb">time</span>,  6% of wall <span class="nb">time</span>
+</span><span class='line'><span class="nb">        </span>avg call <span class="nb">time</span>: 0.000010
+</span><span class='line'>                  +/-: 0.000002
+</span><span class='line'>        med call <span class="nb">time</span>: 0.000010
+</span><span class='line'>
+</span><span class='line'>         min/hist/max: 0.000006 <span class="o">[</span>9992    3    0    0    2    0    0    2    0    1<span class="o">]</span> 0.000110
+</span><span class='line'>
+</span><span class='line'>sendto<span class="o">(</span>4
+</span><span class='line'>            num calls:    10000  25% of syscalls
+</span><span class='line'>             tot <span class="nb">time</span>: 0.101630  15% of syscall <span class="nb">time</span>,  6% of wall <span class="nb">time</span>
+</span><span class='line'><span class="nb">        </span>avg call <span class="nb">time</span>: 0.000010
+</span><span class='line'>                  +/-: 0.000001
+</span><span class='line'>        med call <span class="nb">time</span>: 0.000010
+</span><span class='line'>
+</span><span class='line'>         min/hist/max: 0.000008 <span class="o">[</span>9986   11    0    0    0    2    0    0    0    1<span class="o">]</span> 0.000089
+</span><span class='line'>
+</span><span class='line'><span class="nb">read</span><span class="o">(</span>7
+</span><span class='line'>            num calls:     5000  12% of syscalls
+</span><span class='line'>             tot <span class="nb">time</span>: 0.398393  57% of syscall <span class="nb">time</span>, 23% of wall <span class="nb">time</span>
+</span><span class='line'><span class="nb">        </span>avg call <span class="nb">time</span>: 0.000080
+</span><span class='line'>                  +/-: 0.000003
+</span><span class='line'>        med call <span class="nb">time</span>: 0.000078
+</span><span class='line'>
+</span><span class='line'>         min/hist/max: 0.000077 <span class="o">[</span>4977    9    5    4    2    1    0    0    0    2<span class="o">]</span> 0.000178
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>(The output here is truncated for clarity.
+The full output is available <a href="stracestats.breakdown.out">here</a>.)</p>
+
+<p>Now there are two separate entries for <code>read(6</code> and <code>read(7</code>.
+Inspection of the original strace output for the system calls that created the file descriptors, or an lsof while the process is running, will show exactly which file descriptors are which files, if there is any doubt.</p>
+
+  
+    <footer>
+      <p class="meta">
+        
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-09-06T20:20:00-04:00" pubdate data-updated="true">Sep 6<span>th</span>, 2013</time>
+        
+      </p>
+      
+        <div class="sharing">
+  
+  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://jabrcx.github.com/stracestats/index.html" data-via="" data-counturl="http://jabrcx.github.com/stracestats/index.html" >Tweet</a>
+  
+  
+  
+</div>
+
+      
+    </footer>
+  
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2013/05/24/published-logstats/">published logstats</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2013 - jabrcx -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = 'http://platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>
