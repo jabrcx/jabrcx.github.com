@@ -4,7 +4,7 @@
   <title><![CDATA[jabrcx]]></title>
   <link href="http://jabrcx.github.com/atom.xml" rel="self"/>
   <link href="http://jabrcx.github.com/"/>
-  <updated>2013-09-12T00:34:19-04:00</updated>
+  <updated>2013-09-12T00:38:47-04:00</updated>
   <id>http://jabrcx.github.com/</id>
   <author>
     <name><![CDATA[jabrcx]]></name>
@@ -12,6 +12,22 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[published stracestats]]></title>
+    <link href="http://jabrcx.github.com/blog/2013/09/12/published-stracestats/"/>
+    <updated>2013-09-12T00:37:00-04:00</updated>
+    <id>http://jabrcx.github.com/blog/2013/09/12/published-stracestats</id>
+    <content type="html"><![CDATA[<p>For summarizing and visualizing data in strace output.
+The code is at:</p>
+
+<p><a href="https://github.com/jabrcx/stracestats">https://github.com/jabrcx/stracestats</a></p>
+
+<p>and a write-up with examples is at:</p>
+
+<p><a href="http://jabrcx.github.com/stracestats">http://jabrcx.github.com/stracestats</a></p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[published logstats]]></title>
