@@ -26,6 +26,7 @@ It's available at:
 
 ------------------------------------------------------------------------------
 
+
 ##The Basics
 
 logstats can count event occurrences and it can sum and/or average numeric data in the log entries.
