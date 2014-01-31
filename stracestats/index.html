@@ -24,7 +24,7 @@
   <link href="/atom.xml" rel="alternate" title="jabrcx" type="application/atom+xml">
   <script src="/javascripts/modernizr-2.0.js"></script>
   <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
-  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/libs/jquery.min.js"%3E%3C/script%3E'))</script>
   <script src="/javascripts/octopress.js" type="text/javascript"></script>
   <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
 <link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
@@ -82,11 +82,13 @@
   </header>
   
   <p>strace is an invaluable tool for figuring out what a Linux process is doing.
-With its options for logging how much time is spent in each system call, it&#8217;s also an easy way to profile i/o-bound programs and components in distributed systems.
-However, sometimes it can be a challenge getting the big picture from all the data, without losing details (such as you do with <code>strace -c</code>).
-That&#8217;s what stracestats is for &mdash; it aggregates and reports statistics about the system calls in the output of an strace run.</p>
+With its options for logging how much time is spent in each system call, it&rsquo;s also an easy way to profile i/o-bound programs and components in distributed systems.
+<em>Update</em>: For a fantastic strace explanation and how-to, see <a href="http://chadfowler.com/blog/2014/01/26/the-magic-of-strace/">http://chadfowler.com/blog/2014/01/26/the-magic-of-strace/</a>.</p>
 
-<p>Specifically, for each system call that appears it&#8217;ll report:</p>
+<p>However, sometimes it can be a challenge getting the big picture from all the data, without losing details (such as you do with <code>strace -c</code>).
+That&rsquo;s what stracestats is for &mdash; it aggregates and reports statistics about the system calls in the output of an strace run.</p>
+
+<p>Specifically, for each system call that appears it&rsquo;ll report:</p>
 
 <ul>
 <li>occurrences (number of times called, percentage of overall calls made)</li>
@@ -100,7 +102,7 @@ That&#8217;s what stracestats is for &mdash; it aggregates and reports statistic
 <p>It can report separate statistics for each call with a different first argument (helpful for all those calls that take a file/socket descriptor), and it can make plots of the distribution of time spent in each call.</p>
 
 <p>stracestats is written in python and requires only numpy and, if plotting is desired, matplotlib.
-It&#8217;s available at:</p>
+It&rsquo;s available at:</p>
 
 <p><a href="https://github.com/jabrcx/stracestats">https://github.com/jabrcx/stracestats</a></p>
 
@@ -549,7 +551,7 @@ Note that the last line in each entry is a textual histogram showing the distrib
 
 <h2>Plotting</h2>
 
-<p>If you have matplotlib installed, stracestats can plot the histograms displayed in the text above, just add <code>--show-plots</code> or <code>--save-plots</code>, and, optionally, <code>--plot SYSTEM_CALL_NAME</code> to limit (or expand) what&#8217;s plotted.
+<p>If you have matplotlib installed, stracestats can plot the histograms displayed in the text above, just add <code>--show-plots</code> or <code>--save-plots</code>, and, optionally, <code>--plot SYSTEM_CALL_NAME</code> to limit (or expand) what&rsquo;s plotted.
 For example, to pop up a plot of the distribution in time spent in <code>read</code>:</p>
 
 <figure class='code'><figcaption><span>Plotting Example</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
@@ -565,7 +567,7 @@ For example, to pop up a plot of the distribution in time spent in <code>read</c
 The latter case means only plot the <code>X</code> most relevant system calls.
 If no <code>--plot</code> is given, only the top three are plotted.</p>
 
-<h2>Breaking Down by the System Call&#8217;s First Argument</h2>
+<h2>Breaking Down by the System Call&rsquo;s First Argument</h2>
 
 <p>Often a system call is used on many different resources &mdash; e.g. the system calls that take a file or socket descriptor as their first argument.
 This is obviously what is creating the bimodality here &mdash; <code>read</code> is called both on <code>/dev/null</code> and <code>/dev/urandom</code>, with the latter PRNG being much more expensive.
@@ -694,7 +696,7 @@ Inspection of the original strace output for the system calls that created the f
       
         <div class="sharing">
   
-  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://jabrcx.github.com/stracestats/index.html" data-via="" data-counturl="http://jabrcx.github.com/stracestats/index.html" >Tweet</a>
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://jabrcx.github.com/stracestats/index.html" data-via="" data-counturl="http://jabrcx.github.com/stracestats/index.html" >Tweet</a>
   
   
   
@@ -735,7 +737,7 @@ Inspection of the original strace output for the system calls that created the f
     </div>
   </div>
   <footer role="contentinfo"><p>
-  Copyright &copy; 2013 - jabrcx -
+  Copyright &copy; 2014 - jabrcx -
   <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
 </p>
 
@@ -753,7 +755,7 @@ Inspection of the original strace output for the system calls that created the f
       var twitterWidgets = document.createElement('script');
       twitterWidgets.type = 'text/javascript';
       twitterWidgets.async = true;
-      twitterWidgets.src = 'http://platform.twitter.com/widgets.js';
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
       document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
     })();
   </script>
