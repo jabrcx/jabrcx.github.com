@@ -19,23 +19,3 @@
 //$sidebar-pad-medium: 15px;
 //$sidebar-pad-wide: 20px;
 //$sidebar-width-wide: 300px;
-
-//following example at http://blog.bigdinosaur.org/changing-octopresss-header/; JAB 2013-05-24
-body > header h1 {
-	padding-left:4em;
-	text-align:right;
-}
-body > header h1:before {
-	content:"";
-	position:absolute;
-	left:0em;
-	right:0;
-	top:0em;
-	width:357px;
-	height:168px;
-	overflow:hidden;
-	text-align:left;
-	background-image:url('/images/jab.header_logo.png');
-	background-repeat:no-repeat;
-}
-

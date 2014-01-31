@@ -9,6 +9,8 @@ footer: true
 
 strace is an invaluable tool for figuring out what a Linux process is doing.
 With its options for logging how much time is spent in each system call, it's also an easy way to profile i/o-bound programs and components in distributed systems.
+*Update*: For a fantastic strace explanation and how-to, see <http://chadfowler.com/blog/2014/01/26/the-magic-of-strace/>.
+
 However, sometimes it can be a challenge getting the big picture from all the data, without losing details (such as you do with `strace -c`).
 That's what stracestats is for &mdash; it aggregates and reports statistics about the system calls in the output of an strace run.
 
