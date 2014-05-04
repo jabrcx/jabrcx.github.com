@@ -5,7 +5,7 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>@jabrcx</title>
+  <title>how to save jobs when you kill storage - @jabrcx</title>
   <meta name="author" content="John A. Brunelle">
 
   
@@ -19,7 +19,7 @@ you need to take down some storage, but there are &hellip;">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://jabrcx.github.com">
+  <link rel="canonical" href="http://jabrcx.github.com/blog/2014/05/04/how-to-save-jobs-when-you-kill-storage">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="@jabrcx" type="application/atom+xml">
@@ -63,15 +63,12 @@ you need to take down some storage, but there are &hellip;">
 </nav>
   <div id="main">
     <div id="content">
-      <div class="blog-index">
+      <div>
+<article class="hentry" role="article">
   
-  
-  
-    <article>
-      
   <header>
     
-      <h1 class="entry-title"><a href="/blog/2014/05/04/how-to-save-jobs-when-you-kill-storage/">how to save jobs when you kill storage</a></h1>
+      <h1 class="entry-title">how to save jobs when you kill storage</h1>
     
     
       <p class="meta">
@@ -94,7 +91,7 @@ you need to take down some storage, but there are &hellip;">
   </header>
 
 
-  <div class="entry-content"><p>It&rsquo;s a common predicament for admins of dynamic systems that also run long jobs &mdash;
+<div class="entry-content"><p>It&rsquo;s a common predicament for admins of dynamic systems that also run long jobs &mdash;
 you need to take down some storage, but there are processes using it that you really don&rsquo;t want to kill.
 Here&rsquo;s a way to save those jobs by live-migrating them to new storage.
 In short, it&rsquo;s another case in which gdb let&rsquo;s you do the sysadmin equivalent of <a href="https://www.youtube.com/watch?v=MQm5BnhTBEQ">changing the tires while driving down the road</a>.</p>
@@ -229,65 +226,16 @@ Then there are no concerns about the process trying to use files in the &ldquo;o
 
 <p>Beware of processes that have open network connections and could hit TCP timeouts if the switch takes too long.</p>
 </div>
-  
-  
 
 
-    </article>
-  
-  
-    <article>
+  <footer>
+    <p class="meta">
       
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/09/12/published-stracestats/">published stracestats</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
   
 
+<span class="byline author vcard">Posted by <span class="fn">John A. Brunelle</span></span>
 
-<time datetime="2013-09-12T00:37:00-04:00" pubdate data-updated="true">Sep 12<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>For summarizing and visualizing data in strace output.
-The code is at:</p>
-
-<p><a href="https://github.com/jabrcx/stracestats">https://github.com/jabrcx/stracestats</a></p>
-
-<p>and a write-up with examples is at:</p>
-
-<p><a href="http://jabrcx.github.com/stracestats">http://jabrcx.github.com/stracestats</a></p>
-</div>
-  
-  
-
-
-    </article>
-  
-  
-    <article>
       
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/05/24/published-logstats/">published logstats</a></h1>
-    
-    
-      <p class="meta">
-        
 
 
 
@@ -299,34 +247,32 @@ The code is at:</p>
   
 
 
-<time datetime="2013-05-24T21:21:00-04:00" pubdate data-updated="true">May 24<span>th</span>, 2013</time>
-        
-      </p>
+<time datetime="2014-05-04T09:34:13-04:00" pubdate data-updated="true">May 4<span>th</span>, 2014</time>
+      
+
+
+    </p>
     
-  </header>
-
-
-  <div class="entry-content"><p>For summarizing and visualizing data in log files.
-The code is at:</p>
-
-<p><a href="https://github.com/jabrcx/logstats">https://github.com/jabrcx/logstats</a></p>
-
-<p>and a write-up with examples is at:</p>
-
-<p><a href="http://jabrcx.github.com/logstats">http://jabrcx.github.com/logstats</a></p>
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://jabrcx.github.com/blog/2014/05/04/how-to-save-jobs-when-you-kill-storage/" data-via="" data-counturl="http://jabrcx.github.com/blog/2014/05/04/how-to-save-jobs-when-you-kill-storage/" >Tweet</a>
+  
+  
+  
 </div>
-  
-  
 
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2013/09/12/published-stracestats/" title="Previous Post: published stracestats">&laquo; published stracestats</a>
+      
+      
+    </p>
+  </footer>
+</article>
 
-    </article>
-  
-  <div class="pagination">
-    
-    <a href="/blog/archives">Blog Archives</a>
-    
-  </div>
 </div>
+
 <aside class="sidebar">
   
     <section>
@@ -354,6 +300,7 @@ The code is at:</p>
 
   
 </aside>
+
 
     </div>
   </div>

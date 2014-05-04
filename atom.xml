@@ -1,17 +1,159 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
 
-  <title><![CDATA[jabrcx]]></title>
+  <title><![CDATA[@jabrcx]]></title>
   <link href="http://jabrcx.github.com/atom.xml" rel="self"/>
   <link href="http://jabrcx.github.com/"/>
-  <updated>2014-05-03T22:08:43-04:00</updated>
+  <updated>2014-05-04T13:07:56-04:00</updated>
   <id>http://jabrcx.github.com/</id>
   <author>
-    <name><![CDATA[jabrcx]]></name>
+    <name><![CDATA[John A. Brunelle]]></name>
     
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[how to save jobs when you kill storage]]></title>
+    <link href="http://jabrcx.github.com/blog/2014/05/04/how-to-save-jobs-when-you-kill-storage/"/>
+    <updated>2014-05-04T09:34:13-04:00</updated>
+    <id>http://jabrcx.github.com/blog/2014/05/04/how-to-save-jobs-when-you-kill-storage</id>
+    <content type="html"><![CDATA[<p>It&rsquo;s a common predicament for admins of dynamic systems that also run long jobs &mdash;
+you need to take down some storage, but there are processes using it that you really don&rsquo;t want to kill.
+Here&rsquo;s a way to save those jobs by live-migrating them to new storage.
+In short, it&rsquo;s another case in which gdb let&rsquo;s you do the sysadmin equivalent of <a href="https://www.youtube.com/watch?v=MQm5BnhTBEQ">changing the tires while driving down the road</a>.</p>
+
+<p>Do the following for each process id <code>PID</code> involved in each job:</p>
+
+<h3>1: Attach with the GNU debugger</h3>
+
+<figure class='code'><figcaption><span>attach to the process</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="nv">$ </span>gdb -p PID
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This will also pause the job.</p>
+
+<h3>2: Note all the open files</h3>
+
+<p>Now list all open files of the process:</p>
+
+<figure class='code'><figcaption><span>list open files</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="nv">$ </span>lsof -p PID
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Search this for the filesystem path that you&rsquo;re decommissioning, and note the file descriptor (<code>FD</code> column) of every file that needs to move, including the current working directory (<code>FD</code>=<code>cwd</code>), if applicable.</p>
+
+<h3>3: Flush data</h3>
+
+<p>Back in the gdb session, flush all the file descriptors so that no in-core data is lost; for each numeric file descriptor <code>FILE_DESCRIPTOR</code> run:</p>
+
+<figure class='code'><figcaption><span>flush in-core data</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="p">(</span><span class="n">gdb</span><span class="p">)</span> <span class="n">call</span> <span class="n">fsync</span><span class="p">(</span><span class="n">FILE_DESCRIPTOR</span><span class="p">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Flush OS file system buffers, too; in a shell, run:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="nv">$ </span>sync
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>4: Copy the files</h3>
+
+<p>Create a directory for the process on the new storage, and copy all affected files from the old storage to the new storage.
+Note their paths.</p>
+
+<h3>5: Change the process&rsquo;s current working directory</h3>
+
+<p>If the process&rsquo;s current working directory is on the affected storage, change it to the new storage; in the gdb session, run:</p>
+
+<figure class='code'><figcaption><span>change current working directory</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="p">(</span><span class="n">gdb</span><span class="p">)</span> <span class="n">call</span> <span class="n">chdir</span><span class="p">(</span><span class="s">&quot;/PATH/TO/NEW/CURRENT/WORKING/DIRECTORY&quot;</span><span class="p">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>6: Change each file descriptor to point to its new file</h3>
+
+<p>For each pair of numeric file descriptor <code>FILE_DESCRIPTOR</code> and new storage path <code>/PATH/TO/NEW/FILE</code>, run the following in the gdb session:</p>
+
+<figure class='code'><figcaption><span>swap open files</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="cp">#note the file descriptor</span>
+</span><span class='line'><span class="n">set</span> <span class="n">var</span> <span class="err">$</span><span class="n">oldfd</span> <span class="o">=</span> <span class="n">FILE_DESCRIPTOR</span>
+</span><span class='line'><span class="cp">#get the access mode and flags of the original file</span>
+</span><span class='line'><span class="n">call</span> <span class="n">fcntl</span><span class="p">(</span><span class="err">$</span><span class="n">oldfd</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+</span><span class='line'><span class="cp">#open the new file, with those flags</span>
+</span><span class='line'><span class="n">call</span> <span class="n">open</span><span class="p">(</span><span class="s">&quot;/PATH/TO/NEW/FILE&quot;</span><span class="p">,</span> <span class="err">$</span><span class="p">)</span>
+</span><span class='line'><span class="cp">#note the new file&#39;s file descriptor</span>
+</span><span class='line'><span class="n">set</span> <span class="n">var</span> <span class="err">$</span><span class="n">newfd</span> <span class="o">=</span> <span class="err">$</span>
+</span><span class='line'><span class="cp">#get the offset in the original file</span>
+</span><span class='line'><span class="n">call</span> <span class="n">lseek</span><span class="p">(</span><span class="err">$</span><span class="n">oldfd</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+</span><span class='line'><span class="cp">#set the offset to the identical position in the new file</span>
+</span><span class='line'><span class="n">call</span> <span class="n">lseek</span><span class="p">(</span><span class="err">$</span><span class="n">newfd</span><span class="p">,</span> <span class="err">$</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+</span><span class='line'><span class="cp">#copy the new file descriptor to the old one</span>
+</span><span class='line'><span class="n">call</span> <span class="n">dup2</span><span class="p">(</span><span class="err">$</span><span class="n">newfd</span><span class="p">,</span> <span class="err">$</span><span class="n">oldfd</span><span class="p">)</span>
+</span><span class='line'><span class="cp">#close the new file descriptor</span>
+</span><span class='line'><span class="n">call</span> <span class="n">close</span><span class="p">(</span><span class="err">$</span><span class="n">newfd</span><span class="p">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Some constants are used above:</p>
+
+<ul>
+<li>The <code>3</code> in <code>fcntl($oldfd, 3)</code> is <code>F_GETFL</code>, from /usr/include/bits/fcntl.h</li>
+<li>The <code>1</code> in <code>lseek($oldfd, 0, 1)</code> is <code>SEEK_CUR</code>, from /usr/include/fcntl.h</li>
+<li>The <code>0</code> in <code>lseek($newfd, $, 0)</code> is <code>SEEK_SET</code>, from /usr/include/fcntl.h</li>
+</ul>
+
+
+<h3>7: Check</h3>
+
+<p>Now when you look at the open files:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="nv">$ </span>lsof -p PID
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>you should see all files paths have changed from the old storage to the new storage.</p>
+
+<p>That&rsquo;s it!</p>
+
+<p>You can quit gdb, which will resume the process:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="p">(</span><span class="n">gdb</span><span class="p">)</span> <span class="n">quit</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>Notes</h3>
+
+<p>The job could have absolute paths stored in memory, and after resuming may try to open files on the old storage.
+If you can, setup up a symbolic link or some other trick to redirect it to the new storage.</p>
+
+<p>If you&rsquo;re keeping the same path (e.g. upgrading storage or just taking a downtime), you can just switch the job to a temporary filesystem, swap out the primary storage, and re-switch back the storage to the original location.
+Then there are no concerns about the process trying to use files in the &ldquo;old&rdquo; path, since it will be the same.</p>
+
+<p>Beware of processes that have open network connections and could hit TCP timeouts if the switch takes too long.</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[published stracestats]]></title>
