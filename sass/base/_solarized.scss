@@ -15,7 +15,8 @@ $solar-blue:      #268bd2 !default;
 $solar-cyan:      #2aa198 !default;
 $solar-green:     #859900 !default;
 
-$solarized: dark !default;
+//changed from dark, JAB
+$solarized: light !default;
 
 @if $solarized == light {
 
