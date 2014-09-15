@@ -1,0 +1,313 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>from sys cpu to source code, with perf and flamegraphs - @jabrcx</title>
+  <meta name="author" content="John A. Brunelle">
+
+  
+  <meta name="description" content="Some exploration with perf_events, the performance counters subsystem in Linux, and FlameGraph, the code path profile visualization tool by Brendan &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://jabrcx.github.com/blog/2014/09/14/from-sys-cpu-to-source-code">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="@jabrcx" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/libs/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href='http://fonts.googleapis.com/css?family=Open+Sans:300italic,600italic,600,300' rel='stylesheet' type='text/css'>
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">@jabrcx</a></h1>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:jabrcx.github.com" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">from sys cpu to source code, with perf and flamegraphs</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-09-14T23:17:15-04:00" pubdate data-updated="true">Sep 14<span>th</span>, 2014</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>Some exploration with <a href="https://perf.wiki.kernel.org/">perf_events</a>, the performance counters subsystem in Linux, and <a href="https://github.com/brendangregg/FlameGraph">FlameGraph</a>, the code path profile visualization tool by <a href="http://www.brendangregg.com/">Brendan Gregg</a>.</p>
+
+<h3>The problem</h3>
+
+<p>I was trying to explain horrible scaling when running multiple independent <a href="http://dasher.wustl.edu/tinker/">tinker</a> molecular modeling processes in parallel.
+Run alone, a micro-benchmark took under a second;
+run in parallel, weak scaling efficiency was roughly ~20% &mdash; this while well under the host&rsquo;s core count and memory capacity, where I&rsquo;d expect something closer to 100% efficiency.
+Furthermore, it was only a problem on a certain architecture &mdash; Intel Nehalem/Westmere, but not Harpertown or AMD Abu Dhabi.</p>
+
+<h3>Initial look &mdash; high sys cpu, but what?</h3>
+
+<p>I took a basic first peek at what&rsquo;s going on, using <code>top</code> and other procps utils.
+All processes were at ~100% cpu for the duration, and it was all sys cpu.</p>
+
+<p>So next I took a look at the syscalls, using <code>strace</code>.
+Running through <a href="http://jabrcx.github.io/stracestats/">stracestats</a>, syscalls were only a tiny fraction of the wall time, and represented a constant time for each proc, independent of parallelism.
+So not the issue.</p>
+
+<p>Then what&rsquo;s all that sys cpu doing?</p>
+
+<h3>Perf to the rescue</h3>
+
+<p>This was my first time digging deep into perf, i.e. beyond <code>perf top</code>.
+It&rsquo;s amazing &mdash; <em>wow</em> should I have added this to my toolbelt sooner.
+So comprehensive &mdash; for profiling, it&rsquo;s a sun compared to the strace, gdb, etc. lamplights.</p>
+
+<p>I actually went down this route because of the highly-communicative <a href="http://www.brendangregg.com/flamegraphs.html">flamegraph</a> plots I&rsquo;d seen circulating.
+Flamegraph makes perf even more fun.
+So I&rsquo;m following in the footsteps of Brendan Gregg &mdash; he wrote <a href="https://github.com/brendangregg/FlameGraph">flamegraph</a>, wrote <a href="http://www.brendangregg.com/perf">the best intro to perf I know of</a>, and has since followed up with a <a href="http://www.brendangregg.com/blog/2014-08-23/linux-perf-tools-linuxcon-na-2014.html">hot talk at LinuxCon</a>.</p>
+
+<p>Back to the problem at hand &mdash; the program runs fine solo, and super slow in parallel; what&rsquo;s the difference?
+Perf gave the answer, and flamegraph made it easy to see; here&rsquo;s how:</p>
+
+<p>Run <code>perf</code> (as root) to start profiling the whole system:</p>
+
+<figure class='code'><figcaption><span>basic full system profile</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="nv">$ </span>perf record -a -F 999 -g -o perf.out
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Run the problematic code, <code>analyze</code> (as me), then kill the perf.</p>
+
+<p>Clone flamegraph and put it in the PATH.</p>
+
+<p>Generate a flamegraph from the perf output (grepping out only the &ldquo;analyze&rdquo; lines that I are relevant):</p>
+
+<figure class='code'><figcaption><span>creating a flamegraph</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="nv">$ </span>perf script -i perf.out | stackcollapse-perf.pl &gt; perf.out.folded
+</span><span class='line'><span class="nv">$ </span>cat perf.out.folded | grep analyze | flamegraph.pl --title <span class="s2">&quot;...&quot;</span> --cp &gt; flamegraph.svg
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The results for running solo and for running four in parallel are below.
+Horizontal widths are time spent in each call (not a time series); going up vertically is going deeper into the call stack.
+Widths are normalized to total run time (the solo plot represents just under a second; the parallel one 18 seconds).</p>
+
+<p><img src="/images/2014.09.14.from-sys-cpu-to-source-code/flamegraph.1.svg" title="running solo" alt="running solo" /></p>
+
+<p><img src="/images/2014.09.14.from-sys-cpu-to-source-code/flamegraph.4.svg" title="running parallel" alt="running parallel" /></p>
+
+<p>Aha, <em>page faults</em>!
+Memory management.
+Specifically during the <code>initprm_</code> function call.
+There is a huge stack of <code>page_fault</code> on top of <code>initprm_</code> (and <code>kvdw_</code>) in the parallel case compared to the solo case.</p>
+
+<p>Okay, so simple <code>/usr/bin/time</code> had actually already pointed out the huge minor page_fault counts in the parallel case, but this better communicates the story, and it&rsquo;s only the beginning&hellip;</p>
+
+<h3>Finding the responsible source code</h3>
+
+<p>Make sure <code>analyze</code> is compiled w/ <code>-ggdb</code> and <code>-fno-omit-frame-pointer</code>, and turn down optimization, too (<code>-O0</code>) so things don&rsquo;t get confusing.
+Then perf can combine the recorded profile and the program&rsquo;s source:</p>
+
+<figure class='code'><figcaption><span>annotating source code with profile info</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="nv">$ </span>perf annotate -i perf.out --symbol<span class="o">=</span>initprm_ --stdio
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><img src="/images/2014.09.14.from-sys-cpu-to-source-code/annotate.1.png" title="header" alt="header" />
+&hellip;
+<img src="/images/2014.09.14.from-sys-cpu-to-source-code/annotate.2.png" title="annotation" alt="annotation" />
+&hellip;</p>
+
+<p>That left-hand column is % cpu time <em>for each line of source code</em>, and the corresponding assembly!
+There were two similar loops later in the output, too.
+So the issue is initialization of a bunch of 3D double-precision matrices in <code>initprm.f</code>.</p>
+
+<h3>Fixing the problem?</h3>
+
+<p>Here&rsquo;s where the story unravels, unfortunately.</p>
+
+<p>The dimension traversal looks good (Fortran uses column-major order)&hellip; but maybe it&rsquo;s a problem jumping from each 8MB matrix to the next?
+Nope, re-ordering and initializing each separately didn&rsquo;t get rid of the page faults, only moved them.</p>
+
+<p>Given the slowdown only happened on older Nehalem/Westmere nodes with three memory channels, and the slowdown kicked in particularly bad when running four or more in parallel, that probably has something to do with it&hellip;</p>
+
+<p>Or maybe there&rsquo;s just something about memory that this already shows and I don&rsquo;t understand (anyone?).</p>
+
+<p>But in the meantime, the hosts that demonstrated the problem have been upgraded (distro point release and 2.6.32-358.11.1 &ndash;> 2.6.32-431.17.1 kernel upgrade), and the problem has gone away!</p>
+
+<p>Since the need to actually solve this has dried up, it remains an unsolved mystery.</p>
+
+<h3>Summary</h3>
+
+<p>Perf is awesome, and flamegraphs make it even more fun.
+I quickly went from a black box of sys cpu usage, to lines of source code responsible for it.
+Though this example problem disappeared before I finished a complete analysis, perf was spot-on showing where to look.
+The exploration was worthwhile, and this is exactly where I&rsquo;ll pick up next time I hit such a situation.</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">John A. Brunelle</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-09-14T23:17:15-04:00" pubdate data-updated="true">Sep 14<span>th</span>, 2014</time>
+      
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://jabrcx.github.com/blog/2014/09/14/from-sys-cpu-to-source-code/" data-via="" data-counturl="http://jabrcx.github.com/blog/2014/09/14/from-sys-cpu-to-source-code/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2014/05/04/how-to-save-jobs-when-you-kill-storage/" title="Previous Post: how to save jobs when you kill storage">&laquo; how to save jobs when you kill storage</a>
+      
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2014/09/14/from-sys-cpu-to-source-code/">from sys cpu to source code, with perf and flamegraphs</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/05/04/how-to-save-jobs-when-you-kill-storage/">how to save jobs when you kill storage</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/12/published-stracestats/">published stracestats</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/05/24/published-logstats/">published logstats</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2014 - John A. Brunelle -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

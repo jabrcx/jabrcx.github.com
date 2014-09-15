@@ -4,7 +4,7 @@
   <title><![CDATA[@jabrcx]]></title>
   <link href="http://jabrcx.github.com/atom.xml" rel="self"/>
   <link href="http://jabrcx.github.com/"/>
-  <updated>2014-05-04T13:07:56-04:00</updated>
+  <updated>2014-09-15T01:04:04-04:00</updated>
   <id>http://jabrcx.github.com/</id>
   <author>
     <name><![CDATA[John A. Brunelle]]></name>
@@ -12,6 +12,122 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[from sys cpu to source code, with perf and flamegraphs]]></title>
+    <link href="http://jabrcx.github.com/blog/2014/09/14/from-sys-cpu-to-source-code/"/>
+    <updated>2014-09-14T23:17:15-04:00</updated>
+    <id>http://jabrcx.github.com/blog/2014/09/14/from-sys-cpu-to-source-code</id>
+    <content type="html"><![CDATA[<p>Some exploration with <a href="https://perf.wiki.kernel.org/">perf_events</a>, the performance counters subsystem in Linux, and <a href="https://github.com/brendangregg/FlameGraph">FlameGraph</a>, the code path profile visualization tool by <a href="http://www.brendangregg.com/">Brendan Gregg</a>.</p>
+
+<h3>The problem</h3>
+
+<p>I was trying to explain horrible scaling when running multiple independent <a href="http://dasher.wustl.edu/tinker/">tinker</a> molecular modeling processes in parallel.
+Run alone, a micro-benchmark took under a second;
+run in parallel, weak scaling efficiency was roughly ~20% &mdash; this while well under the host&rsquo;s core count and memory capacity, where I&rsquo;d expect something closer to 100% efficiency.
+Furthermore, it was only a problem on a certain architecture &mdash; Intel Nehalem/Westmere, but not Harpertown or AMD Abu Dhabi.</p>
+
+<h3>Initial look &mdash; high sys cpu, but what?</h3>
+
+<p>I took a basic first peek at what&rsquo;s going on, using <code>top</code> and other procps utils.
+All processes were at ~100% cpu for the duration, and it was all sys cpu.</p>
+
+<p>So next I took a look at the syscalls, using <code>strace</code>.
+Running through <a href="http://jabrcx.github.io/stracestats/">stracestats</a>, syscalls were only a tiny fraction of the wall time, and represented a constant time for each proc, independent of parallelism.
+So not the issue.</p>
+
+<p>Then what&rsquo;s all that sys cpu doing?</p>
+
+<h3>Perf to the rescue</h3>
+
+<p>This was my first time digging deep into perf, i.e. beyond <code>perf top</code>.
+It&rsquo;s amazing &mdash; <em>wow</em> should I have added this to my toolbelt sooner.
+So comprehensive &mdash; for profiling, it&rsquo;s a sun compared to the strace, gdb, etc. lamplights.</p>
+
+<p>I actually went down this route because of the highly-communicative <a href="http://www.brendangregg.com/flamegraphs.html">flamegraph</a> plots I&rsquo;d seen circulating.
+Flamegraph makes perf even more fun.
+So I&rsquo;m following in the footsteps of Brendan Gregg &mdash; he wrote <a href="https://github.com/brendangregg/FlameGraph">flamegraph</a>, wrote <a href="http://www.brendangregg.com/perf">the best intro to perf I know of</a>, and has since followed up with a <a href="http://www.brendangregg.com/blog/2014-08-23/linux-perf-tools-linuxcon-na-2014.html">hot talk at LinuxCon</a>.</p>
+
+<p>Back to the problem at hand &mdash; the program runs fine solo, and super slow in parallel; what&rsquo;s the difference?
+Perf gave the answer, and flamegraph made it easy to see; here&rsquo;s how:</p>
+
+<p>Run <code>perf</code> (as root) to start profiling the whole system:</p>
+
+<figure class='code'><figcaption><span>basic full system profile</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="nv">$ </span>perf record -a -F 999 -g -o perf.out
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Run the problematic code, <code>analyze</code> (as me), then kill the perf.</p>
+
+<p>Clone flamegraph and put it in the PATH.</p>
+
+<p>Generate a flamegraph from the perf output (grepping out only the &ldquo;analyze&rdquo; lines that I are relevant):</p>
+
+<figure class='code'><figcaption><span>creating a flamegraph</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="nv">$ </span>perf script -i perf.out | stackcollapse-perf.pl &gt; perf.out.folded
+</span><span class='line'><span class="nv">$ </span>cat perf.out.folded | grep analyze | flamegraph.pl --title <span class="s2">&quot;...&quot;</span> --cp &gt; flamegraph.svg
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The results for running solo and for running four in parallel are below.
+Horizontal widths are time spent in each call (not a time series); going up vertically is going deeper into the call stack.
+Widths are normalized to total run time (the solo plot represents just under a second; the parallel one 18 seconds).</p>
+
+<p><img src="http://jabrcx.github.com/images/2014.09.14.from-sys-cpu-to-source-code/flamegraph.1.svg" title="running solo" alt="running solo" /></p>
+
+<p><img src="http://jabrcx.github.com/images/2014.09.14.from-sys-cpu-to-source-code/flamegraph.4.svg" title="running parallel" alt="running parallel" /></p>
+
+<p>Aha, <em>page faults</em>!
+Memory management.
+Specifically during the <code>initprm_</code> function call.
+There is a huge stack of <code>page_fault</code> on top of <code>initprm_</code> (and <code>kvdw_</code>) in the parallel case compared to the solo case.</p>
+
+<p>Okay, so simple <code>/usr/bin/time</code> had actually already pointed out the huge minor page_fault counts in the parallel case, but this better communicates the story, and it&rsquo;s only the beginning&hellip;</p>
+
+<h3>Finding the responsible source code</h3>
+
+<p>Make sure <code>analyze</code> is compiled w/ <code>-ggdb</code> and <code>-fno-omit-frame-pointer</code>, and turn down optimization, too (<code>-O0</code>) so things don&rsquo;t get confusing.
+Then perf can combine the recorded profile and the program&rsquo;s source:</p>
+
+<figure class='code'><figcaption><span>annotating source code with profile info</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="nv">$ </span>perf annotate -i perf.out --symbol<span class="o">=</span>initprm_ --stdio
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><img src="http://jabrcx.github.com/images/2014.09.14.from-sys-cpu-to-source-code/annotate.1.png" title="header" alt="header" />
+&hellip;
+<img src="http://jabrcx.github.com/images/2014.09.14.from-sys-cpu-to-source-code/annotate.2.png" title="annotation" alt="annotation" />
+&hellip;</p>
+
+<p>That left-hand column is % cpu time <em>for each line of source code</em>, and the corresponding assembly!
+There were two similar loops later in the output, too.
+So the issue is initialization of a bunch of 3D double-precision matrices in <code>initprm.f</code>.</p>
+
+<h3>Fixing the problem?</h3>
+
+<p>Here&rsquo;s where the story unravels, unfortunately.</p>
+
+<p>The dimension traversal looks good (Fortran uses column-major order)&hellip; but maybe it&rsquo;s a problem jumping from each 8MB matrix to the next?
+Nope, re-ordering and initializing each separately didn&rsquo;t get rid of the page faults, only moved them.</p>
+
+<p>Given the slowdown only happened on older Nehalem/Westmere nodes with three memory channels, and the slowdown kicked in particularly bad when running four or more in parallel, that probably has something to do with it&hellip;</p>
+
+<p>Or maybe there&rsquo;s just something about memory that this already shows and I don&rsquo;t understand (anyone?).</p>
+
+<p>But in the meantime, the hosts that demonstrated the problem have been upgraded (distro point release and 2.6.32-358.11.1 &ndash;> 2.6.32-431.17.1 kernel upgrade), and the problem has gone away!</p>
+
+<p>Since the need to actually solve this has dried up, it remains an unsolved mystery.</p>
+
+<h3>Summary</h3>
+
+<p>Perf is awesome, and flamegraphs make it even more fun.
+I quickly went from a black box of sys cpu usage, to lines of source code responsible for it.
+Though this example problem disappeared before I finished a complete analysis, perf was spot-on showing where to look.
+The exploration was worthwhile, and this is exactly where I&rsquo;ll pick up next time I hit such a situation.</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[how to save jobs when you kill storage]]></title>

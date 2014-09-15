@@ -370,6 +370,10 @@ For all the details.
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2014/09/14/from-sys-cpu-to-source-code/">from sys cpu to source code, with perf and flamegraphs</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2014/05/04/how-to-save-jobs-when-you-kill-storage/">how to save jobs when you kill storage</a>
       </li>
     
